@@ -63,7 +63,7 @@ function SpellBuilder() {
 
     //Handles input changes for both adding and changing spells
     function handleSpellInputChange(e) {
-        const { name, value, type, checked } = e.target;
+        const { name, value, checked } = e.target;
         console.log(e.target)
         if (name === "spellName") setSpellName(value);
         if (name === "DC") setDC(value);

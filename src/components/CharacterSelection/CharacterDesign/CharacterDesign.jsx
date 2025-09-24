@@ -18,7 +18,7 @@ function CharacterDesign() {
         } else {
             setCharacterName(name);
         }
-    }, []);
+    }, [name]);
 
     function handleChangeCharacter() {
         if (createOverEdit===true && characterName !== "") {
