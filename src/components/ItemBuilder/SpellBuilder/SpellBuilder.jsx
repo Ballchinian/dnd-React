@@ -79,11 +79,14 @@ function SpellBuilder() {
         //Validate & parse damage dice
         const result = parseDmgDie(spellName, dmgDieNumbers);
         
-       if (spellChoices.some(
+        if (spellChoices.some(
             w => w.getSpellName().toLowerCase() === spellName.trim().toLowerCase() &&
                 w.getSpellName() !== selectedSpellName
         )) {
             newErrors.duplicate = "A spell with this name already exists.";
+        }
+        if (DC === "" || isNaN(DC)) {
+            newErrors.DC = "Hit value must be a number.";
         }
         if (result.errors) {
             Object.assign(newErrors, result.errors);
@@ -148,6 +151,9 @@ function SpellBuilder() {
                     )}
 
                 <li>DC<input type="number" value={DC} name="DC" onChange={handleSpellInputChange} /></li>
+                {errors.DC && (
+                    <div className="text-danger">{errors.DC}</div>
+                )}
 
                 {/* Save Type Radio Buttons */}
                 <li>
@@ -227,6 +233,10 @@ function SpellBuilder() {
 
             <ol>
                 <li>DC<input type="number" value={DC} name="DC" onChange={handleSpellInputChange} /></li>
+                {errors.DC && (
+                    <div className="text-danger">{errors.DC}</div>
+                )}
+                
                 <li>
                     Save Type:
                     {["Mind","Reflex","Fort"].map((type) => (

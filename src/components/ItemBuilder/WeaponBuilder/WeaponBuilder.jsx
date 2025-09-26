@@ -72,6 +72,9 @@ function WeaponBuilder() {
         )) {
             newErrors.duplicate = "A weapon with this name already exists.";
         }
+        if (weaponHit === "" || isNaN(weaponHit)) {
+            newErrors.weaponHit = "Hit value must be a number.";
+        }
         if (result.errors) {
             Object.assign(newErrors, result.errors);
         }
@@ -135,8 +138,8 @@ function WeaponBuilder() {
                     )}
 
                     <li>Hit Die<input type="number" value={weaponHit}  name="weaponHit" onChange={handleWeaponInputChange}></input></li>
-                    {errors.dcOrWeaponHit && (
-                        <div className="text-danger">{errors.dcOrWeaponHit}</div>
+                    {errors.weaponHit && (
+                        <div className="text-danger">{errors.weaponHit}</div>
                     )}
 
                     <li>Damage Die<input type="text" name="dmgDieNumbers" value={dmgDieNumbers} onChange={handleWeaponInputChange}></input></li>
@@ -192,8 +195,8 @@ function WeaponBuilder() {
 
                 <ol>
                     <li>Hit Die<input type="text" value={weaponHit}  name="weaponHit" onChange={handleWeaponInputChange}></input></li>
-                    {errors.dcOrWeaponHit && (
-                        <div className="text-danger">{errors.dcOrWeaponHit}</div>
+                    {errors.weaponHit && (
+                        <div className="text-danger">{errors.weaponHit}</div>
                     )}
 
                     <li>Damage Die<input type="text" name="dmgDieNumbers" value={dmgDieNumbers} onChange={handleWeaponInputChange}></input></li>

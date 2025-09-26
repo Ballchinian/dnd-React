@@ -6,11 +6,30 @@ import { useParams } from "react-router-dom";
 import NewCharacterPicture from "../../../images/characterImages/blank character.png";
 
 function CharacterDesign() {
-    const [editNameVis, setEditNameVis] = useState(true);
-    const [characterName, setCharacterName] = useState("");
-    const [createOverEdit, setCreateOverEdit] = useState(false);
+    //From url
     const { name } = useParams();
 
+    //UI States
+    const [editNameVis, setEditNameVis] = useState(true);
+    const [createOverEdit, setCreateOverEdit] = useState(false);
+    
+    //Stored Characters
+    const [characterStorage, setCharacterStorage] = useState([])
+
+    //Stats we care about
+    const [characterName, setCharacterName] = useState("");
+    const [imgUrl, setImgUrl] = useState("")
+    const [errors, setErrors] = useState({})
+    const [characterStats, setCharacterStats] = useState({
+        AC: 0,
+        athletics: 0,
+        health: 0,
+        reflex: 0,
+        fortitude: 0,
+        mind: 0
+    });
+
+    //When entering, check if a newCharacter is being selected or if an old character is being edited, then set the UI up
     useEffect(() => {
         if (name === "newCharacter") {
             setEditNameVis(false);
@@ -20,13 +39,47 @@ function CharacterDesign() {
         }
     }, [name]);
 
-    function handleChangeCharacter() {
+
+    function handleCharacterInputChange(e) {
+    const { name, value } = e.target;
+    setCharacterStats(prev => ({
+        ...prev,
+        [name]: value
+    }));
+}
+
+    //Purely for the bottom button and if it shows new character or edit character
+    function handleChangeCharacter() {  
+
+        //New character mode
         if (createOverEdit===true && characterName !== "") {
             setCreateOverEdit(false);
         }
+
+        //Edit character mode
+        const newErrors={}
+        Object.entries(characterStats).forEach(([key, value]) => {
+            if (value === "" || isNaN(value)) {
+                newErrors[key] = `${key} must be a number!`;
+            }
+        });
+
+        if (!characterName || characterName.trim() === "") {
+        newErrors.characterName = "Character name is required.";
+    }
+        if (Object.keys(newErrors).length > 0) {
+            setErrors(newErrors);
+            console.log(errors);
+            return;
+        }
+        setErrors({});
+
+        setCharacterStorage(characterStats);
+        //To change with backend logic
     };
 
     function handeImageUpload() {
+        //To change with backend logic
         console.log("to do");
     }
 
@@ -51,6 +104,10 @@ function CharacterDesign() {
                         onKeyDown={(e) => { if (e.key === "Enter" && characterName.trim() !== "") setEditNameVis(true); }}
                         autoFocus
                     />
+                    
+                )}
+                {errors.characterName && (
+                        <div className="text-danger">{errors.characterName}</div>
                 )}
 
                 <img
@@ -74,12 +131,39 @@ function CharacterDesign() {
                 <Card style={{ width:"200px", margin:"60px", height:"auto" }}>
                     <CardBody>
                         <h3>Stats</h3>
+
                         <p>AC</p>
-                        <Form.Control type="number" />
+                        <Form.Control 
+                            type="number" 
+                            name="AC" 
+                            value={characterStats.AC} 
+                            onChange={handleCharacterInputChange} 
+                        />
+                        {errors.AC && (
+                            <div className="text-danger">{errors.AC}</div>
+                        )}
+
                         <p>Athletics</p>
-                        <Form.Control type="number" />
+                        <Form.Control 
+                            type="number" 
+                            name="athletics"
+                            value={characterStats.athletics} 
+                            onChange={handleCharacterInputChange} 
+                        />
+                        {errors.athletics && (
+                            <div className="text-danger">{errors.athletics}</div>
+                        )}
+
                         <p>Health</p>
-                        <Form.Control type="number" />
+                        <Form.Control 
+                            type="number" 
+                            name="health"
+                            value={characterStats.health} 
+                            onChange={handleCharacterInputChange} 
+                        />
+                        {errors.health && (
+                            <div className="text-danger">{errors.health}</div>
+                        )}
                     </CardBody>
                 </Card>
 
@@ -87,24 +171,48 @@ function CharacterDesign() {
                 <Card style={{ width:"200px", margin:"60px", height:"auto" }}>
                     <CardBody>
                         <h3>Saves</h3>
+
                         <p>Reflex</p>
-                        <Form.Control type="number" />
+                        <Form.Control 
+                            type="number" 
+                            name="reflex"
+                            value={characterStats.reflex} 
+                            onChange={handleCharacterInputChange} 
+                        />
+                        {errors.reflex && (
+                            <div className="text-danger">{errors.reflex}</div>
+                        )}
+
                         <p>Fortitude</p>
-                        <Form.Control type="number" />
-                        <p>Will</p>
-                        <Form.Control type="number" />
+                        <Form.Control 
+                            type="number" 
+                            name="fortitude"
+                            value={characterStats.fortitude} 
+                            onChange={handleCharacterInputChange} 
+                        />
+                        {errors.fortitude && (
+                            <div className="text-danger">{errors.fortitude}</div>
+                        )}
+
+                        <p>Mind</p>
+                        <Form.Control 
+                            type="number" 
+                            name="mind"
+                            value={characterStats.mind} 
+                            onChange={handleCharacterInputChange} 
+                        />
+                        {errors.mind && (
+                            <div className="text-danger">{errors.mind}</div>
+                        )}
                     </CardBody>
                 </Card>
             </div>
-
-            {/* Bottom button */}
+            {/* Bottom button */} 
             <Button 
                 style={{ width: "200px", marginTop: "40px", marginBottom: "40px" }} 
-                variant="dark"
-                onClick={handleChangeCharacter}
-            >
-                {createOverEdit ? 'New Character' : 'Edit Character'}
-            </Button>
+                variant="dark" 
+                onClick={handleChangeCharacter} > 
+            {createOverEdit ? 'New Character' : 'Edit Character'} </Button>
         </div>
     );
 }
