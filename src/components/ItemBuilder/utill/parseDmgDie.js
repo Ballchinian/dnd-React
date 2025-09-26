@@ -9,10 +9,17 @@ function parseDmgDie(name, dmgDieNumbers) {
     let numRolled = 0;
     let diceRolled = 0;
     let modifier = 0;
-
+    console.log(`${numRolled} and ${diceRolled} and ${modifier}`);
     formatCheck.forEach((dmgDieSplit, index) => {
+        console.log(`${dmgDieSplit} and the index ${index}`)
         if (dmgDieSplit === '0' || dmgDieSplit === '') {
-            dmgDieCheck = false;
+            if (index === 2) {
+                modifier=0;
+                
+            } else {
+                dmgDieCheck = false;
+            }
+            
         } else {
             //Convert to a number
             const value = Number(dmgDieSplit);
@@ -30,6 +37,7 @@ function parseDmgDie(name, dmgDieNumbers) {
         }
     });
 
+    console.log(`${numRolled} and ${diceRolled} and ${modifier}`);
     let newErrors = {};
 
         if (name.trim() === "") {
