@@ -9,9 +9,7 @@ function parseDmgDie(name, dmgDieNumbers) {
     let numRolled = 0;
     let diceRolled = 0;
     let modifier = 0;
-    console.log(`${numRolled} and ${diceRolled} and ${modifier}`);
     formatCheck.forEach((dmgDieSplit, index) => {
-        console.log(`${dmgDieSplit} and the index ${index}`)
         if (dmgDieSplit === '0' || dmgDieSplit === '') {
             if (index === 2) {
                 modifier=0;
@@ -37,18 +35,17 @@ function parseDmgDie(name, dmgDieNumbers) {
         }
     });
 
-    console.log(`${numRolled} and ${diceRolled} and ${modifier}`);
     let newErrors = {};
 
         if (name.trim() === "") {
-            newErrors.name = "Weapon name is required";
+            newErrors.name = "Name is required";
         }
 
 
         if (!Number.isInteger(+diceRolled) || !dmgDieCheck) {
             newErrors.dmgDieNumbers = "Invalid damage die (e.g. 4d6+3)";
         }
-
+        
 
         if (Object.keys(newErrors).length > 0) {
             return {errors: newErrors};

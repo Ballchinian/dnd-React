@@ -1,9 +1,6 @@
-import Card from 'react-bootstrap/Card';
-import Button from 'react-bootstrap/Button';
-//import './SpellBuilder.css';
+import { Dropdown, ButtonGroup, Form, Button, Card } from "react-bootstrap";
 import { useState } from 'react';
 import parseDmgDie from "../utill/parseDmgDie";
-import { Dropdown, ButtonGroup, Form } from "react-bootstrap";
 
 //How we are storing the spells
 class Spell {
@@ -39,11 +36,11 @@ function SpellBuilder() {
     //UseStates both for adding and changing spells
     const [spellChoices, setSpellChoices] = useState([]);
     const [spellName, setSpellName] = useState("");
-    const [DC, setDC] = useState(""); //Replaces Hit Die
+    const [DC, setDC] = useState(0); 
     const [saveType, setSaveType] = useState("Mind"); //Default Mind
     const [AoE, setAoE] = useState(false); //Boolean toggle
     const [dmgDieNumbers, setDmgDieNumbers] = useState("");
-    const [errors, setErrors] = useState("");
+    const [errors, setErrors] = useState({});
 
     //UseState for ChangeSpell
     const [selectedSpellName, setSelectedSpellName] = useState("Select spell to change");
@@ -52,11 +49,11 @@ function SpellBuilder() {
     const [divVisibility, setDivVisibility] = useState(false);
 
     function resetValues() {
-        setDC("");
+        setDC(0);
         setSaveType("Mind");
         setAoE(false);
         setDmgDieNumbers("");
-        setErrors("");
+        setErrors({});
         setSpellName("");
         setSelectedSpellName("Select spell to change");
     }
@@ -64,10 +61,9 @@ function SpellBuilder() {
     //Handles input changes for both adding and changing spells
     function handleSpellInputChange(e) {
         const { name, value, checked } = e.target;
-        console.log(e.target)
         if (name === "spellName") setSpellName(value);
         if (name === "DC") setDC(value);
-        if (name === "saveType") setSaveType(value);
+        if ((name === "addSaveType" || (name === "changeSaveType"))) setSaveType(value);
         if (name === "AoE") setAoE(checked); //Toggle switch
         if (name === "dmgDieNumbers") setDmgDieNumbers(value);
     }
@@ -78,66 +74,51 @@ function SpellBuilder() {
         resetValues();
     }
 
-    function handleAddSpell() {
-        //Refines the user input
+    function handleSaveSpell() {
+        //Validate & parse damage dice
         const result = parseDmgDie(spellName, dmgDieNumbers);
 
-        //Check for errors
+        
         if (result.errors) {
             setErrors(result.errors);
             return;
         }
+        setErrors({});
 
         //No errors, extract values
         const { numRolled, diceRolled, modifier } = result;
 
-        //Create a new spell object
-        const spellChoice = new Spell(
+        //Build the spell object
+        const newSpell = new Spell(
             spellName,
-            DC,        //DC replaces Hit Die
-            saveType,  //Mind/Reflex/Fort
-            AoE,        //Boolean
+            DC,
+            saveType,
+            AoE,
             numRolled,
             diceRolled,
             modifier
         );
 
-        //Add the spell to state spellChoices
-        setSpellChoices((prev) => ([ ...prev, spellChoice ]));
+        //Decide whether to ADD or UPDATE
+        setSpellChoices((prev) => {
+            //Find existing spell index (if any) by its original name
+            const index = prev.findIndex(spell => spell.getSpellName() === selectedSpellName);
 
-        //Clear the input fields after adding the spell
-        resetValues();
-    }
-
-    function handleChangeSpell() {
-        const result = parseDmgDie(spellName, dmgDieNumbers);
-
-        if (result.errors) {
-            setErrors(result.errors);
-            return;
-        }
-
-        const { numRolled, diceRolled, modifier } = result;
-
-        //Edit current spell object
-        const updatedSpells = spellChoices.map((spell) => {
-            if (spell.getSpellName() === spellName) {
-                return new Spell(
-                    selectedSpellName, 
-                    DC,
-                    saveType,
-                    AoE,
-                    numRolled,
-                    diceRolled,
-                    modifier
-                );
+            if (index !== -1 && selectedSpellName !== "Select spell to change") {
+                //UPDATE MODE
+                const updated = [...prev];
+                updated[index] = newSpell;
+                return updated;
             }
-            return spell;
+
+            //ADD MODE
+            return [...prev, newSpell];
         });
 
-        setSpellChoices(updatedSpells);
+        //Reset form
         resetValues();
     }
+
 
     return <div>
         {/* Add Spell Section */}
@@ -148,11 +129,11 @@ function SpellBuilder() {
 
                 {/* Input fields for adding a spell with error validation*/}
                 <li>Name<input type="text" value={spellName} name="spellName" onChange={handleSpellInputChange} /></li>
-                {errors.spellName && (
-                    <div className="text-danger">{errors.spellName}</div>
+                {errors.name && (
+                    <div className="text-danger">{errors.name}</div>
                 )}
 
-                <li>DC<input type="text" value={DC} name="DC" onChange={handleSpellInputChange} /></li>
+                <li>DC<input type="number" value={DC} name="DC" onChange={handleSpellInputChange} /></li>
 
                 {/* Save Type Radio Buttons */}
                 <li>
@@ -160,10 +141,10 @@ function SpellBuilder() {
                     {["Mind","Reflex","Fort"].map((type) => (
                         <Form.Check 
                             key={type}
-                            id={`radio-${type}`}
+                            id={`addRadio${type}`}
                             type="radio"
                             label={type}
-                            name="saveType"                
+                            name="addSaveType"                
                             value={type}                  
                             checked={saveType === type} 
                             onChange={handleSpellInputChange}
@@ -176,7 +157,7 @@ function SpellBuilder() {
                     AoE (Area Effect):
                     <Form.Check 
                         type="switch"
-                        id="aoe-switch"
+                        id="aoeAdd"
                         name="AoE"
                         checked={AoE}
                         onChange={handleSpellInputChange}
@@ -188,7 +169,7 @@ function SpellBuilder() {
                 {errors.dmgDieNumbers && <div className="text-danger">{errors.dmgDieNumbers}</div>}
             </ol>
 
-            <Button className="mt-4" onClick={handleAddSpell}>Add Spell</Button>
+            <Button className="mt-4" onClick={handleSaveSpell}>Add Spell</Button>
             <Button className="mt-5" onClick={handleSwapSpellUI}>Edit previous Spells</Button>
         </Card>
 
@@ -199,11 +180,12 @@ function SpellBuilder() {
             {/* Dropdown for selecting spell to change */}
             <ButtonGroup className="d-flex align-items-end">
                 <input
-
+                    placeholder={selectedSpellName} 
+                    name="spellName"
                     type="text"
                     className="form-control"
-                    value={selectedSpellName}
-                    onChange={(e) => setSelectedSpellName(e.target.value)}
+                    value={spellName}
+                    onChange={handleSpellInputChange}
                     disabled={selectedSpellName === "Select spell to change"}
                 />
                 <Dropdown
@@ -230,16 +212,16 @@ function SpellBuilder() {
             </ButtonGroup>
 
             <ol>
-                <li>DC<input type="text" value={DC} name="DC" onChange={handleSpellInputChange} /></li>
+                <li>DC<input type="number" value={DC} name="DC" onChange={handleSpellInputChange} /></li>
                 <li>
                     Save Type:
                     {["Mind","Reflex","Fort"].map((type) => (
                         <Form.Check 
                             key={type}
-                            id={`radio-${type}`} // unique
+                            id={`changeRadio${type}`}
                             type="radio"
                             label={type}
-                            name="saveType"
+                            name="changeSaveType"
                             value={type}
                             checked={saveType === type}
                             onChange={handleSpellInputChange}
@@ -250,7 +232,7 @@ function SpellBuilder() {
                     AoE (Area Effect):
                     <Form.Check
                         type="switch"
-                        id="aoe-switch-change"
+                        id="aoeChange"
                         name="AoE"
                         checked={AoE}
                         onChange={handleSpellInputChange}
@@ -261,7 +243,7 @@ function SpellBuilder() {
                 {errors.dmgDieNumbers && <div className="text-danger">{errors.dmgDieNumbers}</div>}  
             </ol>
 
-            <Button className="mt-4" onClick={handleChangeSpell}>Change Spell</Button>
+            <Button className="mt-4" onClick={handleSaveSpell}>Change Spell</Button>
             <Button className="mt-5" onClick={handleSwapSpellUI}>Add new Spells</Button>
         </Card>
     </div>

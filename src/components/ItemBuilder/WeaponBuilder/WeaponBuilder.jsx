@@ -1,9 +1,7 @@
-import Card from 'react-bootstrap/Card';
-import Button from 'react-bootstrap/Button';
-//import './WeaponBuilder.css';
+import {Button, Card , Dropdown, ButtonGroup} from 'react-bootstrap';
 import { useState } from 'react';
 import parseDmgDie from "../utill/parseDmgDie";
-import { Dropdown, ButtonGroup } from "react-bootstrap";
+
 
 //How we are storing the weapons
 class Weapon {
@@ -31,7 +29,7 @@ function WeaponBuilder() {
     const [weaponChoices, setWeaponChoices] = useState([]);
     const [weaponName, setWeaponName] = useState("");
     const [dmgDieNumbers, setDmgDieNumbers] = useState("");
-    const [weaponHit, setWeaponHit] = useState("");
+    const [weaponHit, setWeaponHit] = useState(0);
     const [errors, setErrors] = useState("");
 
     //UseState for ChangeWeapon
@@ -41,9 +39,9 @@ function WeaponBuilder() {
     const [divVisibility, setDivVisibility] = useState(false);
 
     function resetValues() {
-        setWeaponHit("");
+        setWeaponHit(0);
         setDmgDieNumbers("");
-        setErrors("");
+        setErrors({});
         setWeaponName("");
         setSelectedWeaponName("Select weapon to change");
     }
@@ -62,7 +60,7 @@ function WeaponBuilder() {
         resetValues();
     }
 
-    function handleAddWeapon() {
+    function handleSaveWeapon() {
         //Refines the user input
         const result = parseDmgDie(weaponName, dmgDieNumbers);
 
@@ -71,12 +69,13 @@ function WeaponBuilder() {
             setErrors(result.errors);
             return;
         }
+        setErrors({});
 
         //No errors, extract values
         const { numRolled, diceRolled, modifier } = result;
 
         //Create a new weapon object
-        const weaponChoice = new Weapon(
+        const newWeapon = new Weapon(
             weaponName,
             weaponHit,
             numRolled,
@@ -84,48 +83,26 @@ function WeaponBuilder() {
             modifier
         );
 
-        //Add the weapon to state weaponChoices
-        setWeaponChoices((prev) => ([
-            ...prev, weaponChoice,
-        ]));
+        setWeaponChoices((prev) => {
+            //Find existing weapon index (if any) by its original name
+            const index = prev.findIndex(weapon => weapon.getWeaponName() === selectedWeaponName);
 
-        //Clear the input fields after adding the weapon
+            if (index !== -1 && selectedWeaponName !== "Select spell to change") {
+                //UPDATE MODE
+                const updated = [...prev];
+                updated[index] = newWeapon;
+                return updated;
+            }
+
+            //ADD MODE
+            return [...prev, newWeapon];
+        });
+
+        //Reset form
         resetValues();
     }
 
-    function handleAddChangeWeapon() {
-        //Refines the user input
-        const result = parseDmgDie(weaponName, dmgDieNumbers);
-
-        //Check for errors
-        if (result.errors) {
-            setErrors(result.errors);
-            return;
-        }
-
-        //No errors, extract values
-        const { numRolled, diceRolled, modifier } = result;
-
-        //Edit current weapon object
-        const updatedWeapons = weaponChoices.map((weapon) => {
-            if (weapon.getWeaponName() === weaponName) {
-                //Return a new Weapon object with updated values
-                return new Weapon(
-                    selectedWeaponName, 
-                    weaponHit,
-                    numRolled,
-                    diceRolled,
-                    modifier
-                );
-            }
-            return weapon; //keep others unchanged
-        });
-
-
-        setWeaponChoices(updatedWeapons);
-        resetValues()
-    }
-
+   
     return <div>
             {/* Add Weapon Section */}
             {/* className is flex column and display is flex to place buttons at end */}
@@ -135,11 +112,14 @@ function WeaponBuilder() {
 
                     {/* Input fields for adding a weapon with error validation*/}
                     <li>Name<input type="text" value={weaponName} name="weaponName" onChange={handleWeaponInputChange} ></input></li>
-                    {errors.weaponName && (
-                        <div className="text-danger">{errors.weaponName}</div>
+                    {errors.name && (
+                        <div className="text-danger">{errors.name}</div>
                     )}
 
-                    <li>Hit Die<input type="text" value={weaponHit}  name="weaponHit" onChange={handleWeaponInputChange}></input></li>
+                    <li>Hit Die<input type="number" value={weaponHit}  name="weaponHit" onChange={handleWeaponInputChange}></input></li>
+                    {errors.dcOrWeaponHit && (
+                        <div className="text-danger">{errors.dcOrWeaponHit}</div>
+                    )}
 
                     <li>Damage Die<input type="text" name="dmgDieNumbers" value={dmgDieNumbers} onChange={handleWeaponInputChange}></input></li>
                     {errors.dmgDieNumbers && (
@@ -147,7 +127,7 @@ function WeaponBuilder() {
                     )}
                 </ol>
 
-                <Button onClick={ handleAddWeapon }>Add Weapon</Button>
+                <Button onClick={ handleSaveWeapon }>Add Weapon</Button>
                 <Button className="mt-5" onClick={ handleSwapWeaponUI }>Edit previous Weapons</Button>
             </Card>
 
@@ -160,10 +140,12 @@ function WeaponBuilder() {
                 <ButtonGroup className="d-flex align-items-end">
                     {/* Left side: input for renaming weapon */}
                     <input
+                        placeholder={selectedWeaponName} 
+                        name="weaponName"
                         type="text"
-                        className="form-control "
-                        value={selectedWeaponName}
-                        onChange={(e) => setSelectedWeaponName(e.target.value)}
+                        className="form-control"
+                        value={weaponName}
+                        onChange={handleWeaponInputChange}
                         disabled={selectedWeaponName === "Select weapon to change"}
                     />
 
@@ -192,7 +174,9 @@ function WeaponBuilder() {
 
                 <ol>
                     <li>Hit Die<input type="text" value={weaponHit}  name="weaponHit" onChange={handleWeaponInputChange}></input></li>
-
+                    {errors.dcOrWeaponHit && (
+                        <div className="text-danger">{errors.dcOrWeaponHit}</div>
+                    )}
 
                     <li>Damage Die<input type="text" name="dmgDieNumbers" value={dmgDieNumbers} onChange={handleWeaponInputChange}></input></li>
                     {errors.dmgDieNumbers && (
@@ -200,7 +184,7 @@ function WeaponBuilder() {
                     )}
                 </ol>
                     
-                <Button onClick={ handleAddChangeWeapon }>Change Weapon</Button>
+                <Button onClick={ handleSaveWeapon }>Change Weapon</Button>
                 <Button className="mt-5" onClick={ handleSwapWeaponUI }>Add new Weapons</Button>
             </Card>
 
