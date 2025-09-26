@@ -61,12 +61,24 @@ function WeaponBuilder() {
     }
 
     function handleSaveWeapon() {
-        //Refines the user input
+        const newErrors={}
+        //Validate & parse damage dice
         const result = parseDmgDie(weaponName, dmgDieNumbers);
 
-        //Check for errors
+        //Check for errors (made it so multiple errors can show up at once using object newErrors)
+        if (weaponChoices.some(
+            w => w.getWeaponName().toLowerCase() === weaponName.trim().toLowerCase() &&
+                w.getWeaponName() !== selectedWeaponName
+        )) {
+            newErrors.duplicate = "A weapon with this name already exists.";
+        }
         if (result.errors) {
-            setErrors(result.errors);
+            Object.assign(newErrors, result.errors);
+        }
+
+        // If any errors, set them and stop
+        if (Object.keys(newErrors).length > 0) {
+            setErrors(newErrors);
             return;
         }
         setErrors({});
@@ -83,11 +95,14 @@ function WeaponBuilder() {
             modifier
         );
 
+
         setWeaponChoices((prev) => {
+            
+            
             //Find existing weapon index (if any) by its original name
             const index = prev.findIndex(weapon => weapon.getWeaponName() === selectedWeaponName);
 
-            if (index !== -1 && selectedWeaponName !== "Select spell to change") {
+            if (index !== -1 && selectedWeaponName !== "Select weapon to change") {
                 //UPDATE MODE
                 const updated = [...prev];
                 updated[index] = newWeapon;
@@ -114,6 +129,9 @@ function WeaponBuilder() {
                     <li>Name<input type="text" value={weaponName} name="weaponName" onChange={handleWeaponInputChange} ></input></li>
                     {errors.name && (
                         <div className="text-danger">{errors.name}</div>
+                    )}
+                    {errors.duplicate && (
+                        <div className="text-danger">{errors.duplicate}</div>
                     )}
 
                     <li>Hit Die<input type="number" value={weaponHit}  name="weaponHit" onChange={handleWeaponInputChange}></input></li>

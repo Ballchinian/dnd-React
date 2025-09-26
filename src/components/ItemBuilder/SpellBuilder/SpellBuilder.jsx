@@ -75,12 +75,23 @@ function SpellBuilder() {
     }
 
     function handleSaveSpell() {
+        const newErrors={}
         //Validate & parse damage dice
         const result = parseDmgDie(spellName, dmgDieNumbers);
-
         
+       if (spellChoices.some(
+            w => w.getSpellName().toLowerCase() === spellName.trim().toLowerCase() &&
+                w.getSpellName() !== selectedSpellName
+        )) {
+            newErrors.duplicate = "A spell with this name already exists.";
+        }
         if (result.errors) {
-            setErrors(result.errors);
+            Object.assign(newErrors, result.errors);
+        }
+
+        // If any errors, set them and stop
+        if (Object.keys(newErrors).length > 0) {
+            setErrors(newErrors);
             return;
         }
         setErrors({});
@@ -132,6 +143,9 @@ function SpellBuilder() {
                 {errors.name && (
                     <div className="text-danger">{errors.name}</div>
                 )}
+                {errors.duplicate && (
+                        <div className="text-danger">{errors.duplicate}</div>
+                    )}
 
                 <li>DC<input type="number" value={DC} name="DC" onChange={handleSpellInputChange} /></li>
 
