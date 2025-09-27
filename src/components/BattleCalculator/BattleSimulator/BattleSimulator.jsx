@@ -1,12 +1,30 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dropdown, Button, Card, Form, ProgressBar } from "react-bootstrap";
 import Todd from "../../../images/characterImages/Todd.jpg";
+import { useLocation } from "react-router-dom";
 
 //Fake data for demo
 const CONDITION_LIST = ["Runic Weapon", "Slowed", "Frightened"];
 const CHARACTER_LIST = ["Todd the Brave", "Todd the Cunning", "Todd the Fearless"];
 
 function CharacterCard({ title, hp, image }) {
+  const [savedData, setSavedData] = useState(null);
+
+  useEffect(() => {
+    const raw = localStorage.getItem("battleSession");
+    if (raw) {
+      const data = JSON.parse(raw);
+
+      //1hr expiry check
+      const oneHour = 60 * 60 * 1000;
+      if (Date.now() - data.timestamp < oneHour) {
+        setSavedData(data);
+      } else {
+        localStorage.removeItem("battleSession");
+      }
+    }
+  }, []);
+  
   //For the search bar when adding effect
   const [effects, setEffects] = useState([]);
   const [addingEffect, setAddingEffect] = useState(false);

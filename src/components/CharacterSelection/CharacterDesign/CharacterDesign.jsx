@@ -2,10 +2,12 @@ import { CardBody, Card, Button } from "react-bootstrap";
 import Form from "react-bootstrap/Form";
 import { useState, useEffect } from "react";
 import "./CharacterDesign.css";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import NewCharacterPicture from "../../../images/characterImages/blank character.png";
 
 function CharacterDesign() {
+    const navigate = useNavigate();
+    
     //From url
     const { name } = useParams();
 
@@ -63,24 +65,32 @@ function CharacterDesign() {
                 newErrors[key] = `${key} must be a number!`;
             }
         });
-
         if (!characterName || characterName.trim() === "") {
-        newErrors.characterName = "Character name is required.";
-    }
+            newErrors.characterName = "Character name is required.";
+        }
+        if (characterStorage.some(
+            w => w.characterName.toLowerCase() === characterName.trim().toLowerCase()
+        )) {
+            newErrors.duplicate = "A character with this name already exists.";
+        }
         if (Object.keys(newErrors).length > 0) {
             setErrors(newErrors);
-            console.log(errors);
             return;
         }
         setErrors({});
 
-        setCharacterStorage(characterStats);
+        setCharacterStorage(prev => [
+            ...prev, 
+            { 
+                characterName: characterName, 
+                ...characterStats 
+            }
+        ]);
         //To change with backend logic
     };
 
     function handeImageUpload() {
         //To change with backend logic
-        console.log("to do");
     }
 
     return (
@@ -107,9 +117,11 @@ function CharacterDesign() {
                     
                 )}
                 {errors.characterName && (
-                        <div className="text-danger">{errors.characterName}</div>
+                    <div className="text-danger">{errors.characterName}</div>
                 )}
-
+                {errors.duplicate && (
+                    <div className="text-danger">{errors.duplicate}</div>
+                )}
                 <img
                     style={{ width: "200px", height: "200px", marginTop: "20px" }}
                     src={NewCharacterPicture}

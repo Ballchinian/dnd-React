@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 function BattleCalculator() {
     const navigate = useNavigate();
 
-    const defenceConditionTypes = ["Fortitude", "Reflex", "Mind"];
+    const defenceConditionTypes = ["AC", "Fortitude", "Reflex", "Mind"];
     const attackConditionTypes = ["Weapon", "Fortitude", "Reflex", "Mind"];
 
     const [selectedPlayer, setSelectedPlayer] = useState("Choose Player");
@@ -13,13 +13,71 @@ function BattleCalculator() {
     const [selectedConditionDefence, setSelectedConditionDefence] = useState("Select defence type");
     
     const [selectedWeapons, setSelectedWeapons] = useState([]);
+    const [offensiveBonuses, setOffensiveBonuses] = useState({
+        Weapon:    
+        { 
+            toHit: { circumstance: 0, item: 0, status: 0 },
+            damage: { circumstance: 0, item: 0, status: 0 }},
+        Fortitude: 
+        { 
+            toHit: { circumstance: 0, item: 0, status: 0 },
+            damage: { circumstance: 0, item: 0, status: 0 }},
+        Reflex:    
+        { 
+            toHit: { circumstance: 0, item: 0, status: 0 },
+            damage: { circumstance: 0, item: 0, status: 0 }},
+        Mind:      
+        { 
+            toHit: { circumstance: 0, item: 0, status: 0 },
+            damage: { circumstance: 0, item: 0, status: 0 }}
+    });
+
+    const [defensiveBonuses, setDefensiveBonuses] = useState({
+        AC:        { circumstance: 0, item: 0, status: 0 },
+        Fortitude: { circumstance: 0, item: 0, status: 0 },
+        Reflex:    { circumstance: 0, item: 0, status: 0 },
+        Mind:      { circumstance: 0, item: 0, status: 0 }
+    });
     const databaseWeapons = ["Sword","Mace","Firebook"]
+    const players = ["Todd the brave", "Todd the cunning", "Todd the fearless"]
 
     function handleGoToSimulator(characterName) {
-        // optional: slugify for safe URLs
-        const slug = characterName.replace(/\s+/g, "-").toLowerCase();
-        navigate(`/battle-calculator/battle-simulator/${slug}`);
+        const dataToSave = {
+            selectedWeapons: selectedWeapons,
+            offensiveBonuses: offensiveBonuses,
+            defensiveBonuses: defensiveBonuses,         
+            timestamp: Date.now(),                 
+        };
+        localStorage.setItem("battleSession", JSON.stringify(dataToSave));
+        navigate(`/battle-calculator/battle-simulator/`);
     }
+
+    //Type: weapon, fortitude etc... 
+    //Category: toHit/damage
+    //BonusType: circumstance/item/status
+    function handleOffensiveChange(type, category, bonusType, value) {
+        setOffensiveBonuses(prev => ({
+            ...prev,
+            [type]: {
+                ...prev[type],
+                [category]: {
+                    ...prev[type][category],
+                    [bonusType]: Number(value)
+                }
+            }
+        }));
+    }
+    function handleDefensiveChange(type, bonusType, value) {
+        setDefensiveBonuses(prev => ({
+            ...prev,
+            [type]: {
+            ...prev[type],
+            [bonusType]: Number(value)
+            }
+        }));
+    }
+
+
 
     return (
         <div className="d-flex flex-column align-items-center">
@@ -32,8 +90,9 @@ function BattleCalculator() {
                     {selectedPlayer}
                 </Dropdown.Toggle>
                 <Dropdown.Menu>
-                    <Dropdown.Item eventKey="Player 1">Player 1</Dropdown.Item>
-                    <Dropdown.Item eventKey="Player 2">Player 2</Dropdown.Item>
+                    {players.map((player) =>( 
+                        <Dropdown.Item eventKey={player}>{player}</Dropdown.Item>
+                    ))}
                 </Dropdown.Menu>
             </Dropdown>
 
@@ -76,13 +135,37 @@ function BattleCalculator() {
                                 To Hit
                             </h3>
                             {attackConditionTypes.map((type) => (
-                                <ol
-                                    key={type}
-                                    style={{ display: selectedConditionAttack === type ? "block" : "none" }}
-                                >
-                                    <li>Circumstance Bonuses: <Form.Control type="number" placeholder="0" /></li>
-                                    <li>Item Bonuses: <Form.Control type="number" placeholder="0" /></li>
-                                    <li>Status Bonuses: <Form.Control type="number" placeholder="0" /></li>
+                                <ol style={{ display: selectedConditionAttack === type ? "block" : "none" }}>
+                                    <li>
+                                        Circumstance Bonuses:
+                                        <Form.Control
+                                        type="number"
+                                        value={offensiveBonuses[type].toHit.circumstance}
+                                        onChange={(e) =>
+                                            handleOffensiveChange(type, "toHit", "circumstance", e.target.value)
+                                        }
+                                        />
+                                    </li>
+                                    <li>
+                                        Item Bonuses:
+                                        <Form.Control
+                                        type="number"
+                                        value={offensiveBonuses[type].toHit.item}
+                                        onChange={(e) =>
+                                            handleOffensiveChange(type, "toHit", "item", e.target.value)
+                                        }
+                                        />
+                                    </li>
+                                    <li>
+                                        Status Bonuses:
+                                        <Form.Control
+                                        type="number"
+                                        value={offensiveBonuses[type].toHit.status}
+                                        onChange={(e) =>
+                                            handleOffensiveChange(type, "toHit", "status", e.target.value)
+                                        }
+                                        />
+                                    </li>
                                 </ol>
                             ))}
 
@@ -94,14 +177,38 @@ function BattleCalculator() {
                                 Damage
                             </h3>
                             {attackConditionTypes.map((type) => (
-                                <ol
-                                    key={`damage_${type}`}
-                                    style={{ display: selectedConditionAttack === type ? "block" : "none" }}
-                                >
-                                    <li>Circumstance Bonuses: <Form.Control type="number" placeholder="0" /></li>
-                                    <li>Item Bonuses: <Form.Control type="number" placeholder="0" /></li>
-                                    <li>Status Bonuses: <Form.Control type="number" placeholder="0" /></li>
-                                </ol>
+                                <ol style={{ display: selectedConditionAttack === type ? "block" : "none" }}>
+                                    <li>
+                                        Circumstance Bonuses:
+                                        <Form.Control
+                                        type="number"
+                                        value={offensiveBonuses[type].damage.circumstance}
+                                        onChange={(e) =>
+                                            handleOffensiveChange(type, "damage", "circumstance", e.target.value)
+                                        }
+                                        />
+                                    </li>
+                                    <li>
+                                        Item Bonuses:
+                                        <Form.Control
+                                        type="number"
+                                        value={offensiveBonuses[type].damage.item}
+                                        onChange={(e) =>
+                                            handleOffensiveChange(type, "damage", "item", e.target.value)
+                                        }
+                                        />
+                                    </li>
+                                    <li>
+                                        Status Bonuses:
+                                        <Form.Control
+                                        type="number"
+                                        value={offensiveBonuses[type].damage.status}
+                                        onChange={(e) =>
+                                            handleOffensiveChange(type, "damage", "status", e.target.value)
+                                        }
+                                        />
+                                    </li>
+                                    </ol>
                             ))}
                         </Card>
                         
@@ -144,35 +251,56 @@ function BattleCalculator() {
                         {/* Right Column: Defence */}
                         <Card style={{ margin: "20px" }}>
                             <h2>Defensive Stats</h2>
-                            <h3>AC</h3>
-                            <ol>
-                                <li>Circumstance Bonuses: <Form.Control type="number" placeholder="0" /></li>
-                                <li>Item Bonuses: <Form.Control type="number" placeholder="0" /></li>
-                                <li>Status Bonuses: <Form.Control type="number" placeholder="0" /></li>
-                            </ol>
-
                             <Dropdown
                                 onSelect={(key) => setSelectedConditionDefence(key)}
-                                style={{ marginTop: "20px" }}
+                                style={{ marginBottom: "20px" }}
                             >
                                 <Dropdown.Toggle variant="success">
                                     {selectedConditionDefence}
                                 </Dropdown.Toggle>
                                 <Dropdown.Menu>
-                                    <Dropdown.Item eventKey="Fortitude">Fortitude</Dropdown.Item>
-                                    <Dropdown.Item eventKey="Reflex">Reflex</Dropdown.Item>
-                                    <Dropdown.Item eventKey="Mind">Mind</Dropdown.Item>
+                                    <Dropdown.Item eventKey="AC">AC</Dropdown.Item>
+                                    <Dropdown.Item eventKey="Fortitude">Spell (Fortitude)</Dropdown.Item>
+                                    <Dropdown.Item eventKey="Reflex">Spell (Reflex)</Dropdown.Item>
+                                    <Dropdown.Item eventKey="Mind">Spell (Mind)</Dropdown.Item>
                                 </Dropdown.Menu>
                             </Dropdown>
-
+                            <h3
+                                style={{
+                                    display: selectedConditionDefence !== "Select defence type" ? "block" : "none",
+                                }}
+                            >
+                                To save
+                            </h3>
                             {defenceConditionTypes.map((type) => (
                                 <ol
                                     key={type}
                                     style={{ display: selectedConditionDefence === type ? "block" : "none" }}
-                                >
-                                    <li>Circumstance Bonuses: <Form.Control type="number" placeholder="0" /></li>
-                                    <li>Item Bonuses: <Form.Control type="number" placeholder="0" /></li>
-                                    <li>Status Bonuses: <Form.Control type="number" placeholder="0" /></li>
+                                    >
+                                    <li>
+                                        Circumstance:
+                                        <Form.Control
+                                        type="number"
+                                        value={defensiveBonuses[type].circumstance}
+                                        onChange={(e) => handleDefensiveChange(type, "circumstance", e.target.value)}
+                                        />
+                                    </li>
+                                    <li>
+                                        Item:
+                                        <Form.Control
+                                        type="number"
+                                        value={defensiveBonuses[type].item}
+                                        onChange={(e) => handleDefensiveChange(type, "item", e.target.value)}
+                                        />
+                                    </li>
+                                    <li>
+                                        Status:
+                                        <Form.Control
+                                        type="number"
+                                        value={defensiveBonuses[type].status}
+                                        onChange={(e) => handleDefensiveChange(type, "status", e.target.value)}
+                                        />
+                                    </li>
                                 </ol>
                             ))}
                         </Card>
