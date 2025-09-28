@@ -15,7 +15,7 @@ function App() {
         <Route path="/character-selection" element={<CharacterSelection />} />
         <Route path="/character-selection/character-design/:name" element={<CharacterDesign />} />
         <Route path="/battle-calculator" element={<BattleCalculator />} />
-        <Route path="/battle-calculator/battle-simulator/:name" element={<BattleSimulator />}></Route>
+        <Route path="/battle-calculator/battle-simulator" element={<BattleSimulator />}></Route>
       </Routes>
     </BrowserRouter>
   );

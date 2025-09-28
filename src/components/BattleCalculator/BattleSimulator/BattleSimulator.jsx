@@ -20,7 +20,7 @@ function CharacterCard({ title, hp, image }) {
       if (Date.now() - data.timestamp < oneHour) {
         setSavedData(data);
       } else {
-        localStorage.removeItem("battleSession");
+        
       }
     }
   }, []);
