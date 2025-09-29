@@ -14,7 +14,8 @@ function CharacterDesign() {
     //UI States
     const [editNameVis, setEditNameVis] = useState(true);
     const [createOverEdit, setCreateOverEdit] = useState(false);
-    
+    const [confirmedName, setConfirmedName] = useState();
+
     //Stored Characters
     const [characterStorage, setCharacterStorage] = useState([])
 
@@ -43,10 +44,10 @@ function CharacterDesign() {
 
 
     function handleCharacterInputChange(e) {
-    const { name, value } = e.target;
-    setCharacterStats(prev => ({
-        ...prev,
-        [name]: value
+        const { name, value } = e.target;
+        setCharacterStats(prev => ({
+            ...prev,
+            [name]: value
     }));
 }
 
@@ -75,17 +76,30 @@ function CharacterDesign() {
         }
         if (Object.keys(newErrors).length > 0) {
             setErrors(newErrors);
+            setConfirmedName()
             return;
         }
         setErrors({});
 
+        let confirmationMessage;
+        //Shows user that their user went through
+        if (createOverEdit) {
+            confirmationMessage = `${characterName} has been made!`;
+        } else {
+            confirmationMessage = `${characterName} has been edited`;
+        }
+        setConfirmedName(confirmationMessage);
+
         setCharacterStorage(prev => [
-            ...prev, 
-            { 
-                characterName: characterName, 
-                ...characterStats 
+        ...prev,
+        {
+            characterName: characterName,
+            stats: {
+            ...characterStats
             }
+        }
         ]);
+        console.log(characterStorage);
         //To change with backend logic
     };
 
@@ -105,6 +119,7 @@ function CharacterDesign() {
                     >
                         {characterName}
                     </h1>
+                    
                 ) : (
                     <Form.Control
                         type="text"
@@ -114,8 +129,10 @@ function CharacterDesign() {
                         onKeyDown={(e) => { if (e.key === "Enter" && characterName.trim() !== "") setEditNameVis(true); }}
                         autoFocus
                     />
-                    
                 )}
+                {confirmedName && (
+                        <div className="text-success">{confirmedName}</div>
+                    )}
                 {errors.characterName && (
                     <div className="text-danger">{errors.characterName}</div>
                 )}

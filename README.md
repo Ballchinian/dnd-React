@@ -1,4 +1,3 @@
--List of things that need to be done in order off priority
+-List of things that need to be done
 
-h1 fix the battle Calc design
--> Make it so each character has their own unique set of bonuses and debuffs. Right now it global.
+-> Some form of confirmation that a new character has been made in character design
