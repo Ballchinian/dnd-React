@@ -1,4 +1,4 @@
-import Battle from "../models/Battle.js";
+import Battle from "../models/battleModel.js";
 
 // Get all battles
 export const getBattles = async (req, res) => {

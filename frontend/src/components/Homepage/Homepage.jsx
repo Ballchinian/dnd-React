@@ -9,7 +9,7 @@ import './Homepage.css';
 function Homepage() {
     return <div>
         <h1 className="text-center mt-5">Welcome to the Pathfinder 2e Calculator</h1>
-        <p className="text-center mt-5">This is a simple calculator for Dungeons and Dragons players.</p>
+        <p className="text-center mt-5">This is a simple calculator for tabletop players using pathfinder as a basis</p>
 
   
         <div id="mainLinks" style={{margin:"80px"}} className="justify-content-around d-flex">

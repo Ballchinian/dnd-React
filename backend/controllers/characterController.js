@@ -1,6 +1,5 @@
-import Character from "../models/character.js";
+import Character from "../models/characterModel.js";
 
-// Get all characters
 export const getCharacters = async (req, res) => {
   try {
     const characters = await Character.find();
@@ -10,7 +9,6 @@ export const getCharacters = async (req, res) => {
   }
 };
 
-// Create a character
 export const createCharacter = async (req, res) => {
   try {
     const newCharacter = new Character(req.body);
@@ -18,5 +16,29 @@ export const createCharacter = async (req, res) => {
     res.status(201).json(saved);
   } catch (err) {
     res.status(400).json({ message: err.message });
+  }
+};
+
+
+export const updateCharacter = async (req, res) => {
+  try {
+    console.log("Body is:", req.body);
+    const updated = await Character.findOneAndUpdate(
+      { characterName: req.params.name },
+      req.body,
+      { new: true }
+    );
+    res.json(updated);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+};
+
+export const deleteCharacter = async (req, res) => {
+  try {
+    await Character.findOneAndDelete({ characterName: req.params.name });
+    res.json({ message: "Character deleted" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 };

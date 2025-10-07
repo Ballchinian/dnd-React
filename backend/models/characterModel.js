@@ -10,7 +10,7 @@ const characterSchema = new mongoose.Schema({
     fortitude: Number,
     mind: Number
   },
-  imageUrl: String,
+  image: String,
   effects: [String]
 }, { timestamps: true });
 

@@ -1,12 +1,17 @@
+import dotenv from "dotenv";
+dotenv.config();
+
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
 import mongoose from "mongoose";
 
-import characterRoutes from "./routes/characters.js";
-import battleRoutes from "./routes/battle.js";
 
-dotenv.config();
+
+import characterRoutes from "./routes/characterRoutes.js";
+import battleRoutes from "./routes/battleRoutes.js";
+import uploadRoutes from "./routes/uploadRoutes.js";
+
+
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -18,6 +23,7 @@ app.use(express.json());
 // Routes
 app.use("/api/characters", characterRoutes);
 app.use("/api/battles", battleRoutes);
+app.use("/api", uploadRoutes);              // <-- handles /api/upload-image
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI, {

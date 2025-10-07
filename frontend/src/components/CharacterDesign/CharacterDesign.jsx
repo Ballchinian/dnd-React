@@ -3,26 +3,28 @@ import Form from "react-bootstrap/Form";
 import { useState, useEffect } from "react";
 import "./CharacterDesign.css";
 import { useParams, useNavigate } from "react-router-dom";
-import NewCharacterPicture from "../../../images/characterImages/blank character.png";
+import NewCharacterPicture from "../../images/characterImages/blank character.png";
 
 function CharacterDesign() {
     const navigate = useNavigate();
     
     //From url
-    const { name } = useParams();
+    let { name } = useParams();
 
-    //UI States
+    //Confirmation States
     const [editNameVis, setEditNameVis] = useState(true);
     const [createOverEdit, setCreateOverEdit] = useState(false);
-    const [confirmedName, setConfirmedName] = useState();
+    const [uploading, setUploading] = useState(false);
+    const [errors, setErrors] = useState({})
 
+    //Show preview of image before upload
+    const [previewUrl, setPreviewUrl] = useState("");
     //Stored Characters
     const [characterStorage, setCharacterStorage] = useState([])
 
     //Stats we care about
     const [characterName, setCharacterName] = useState("");
     const [imgUrl, setImgUrl] = useState("")
-    const [errors, setErrors] = useState({})
     const [characterStats, setCharacterStats] = useState({
         AC: 0,
         athletics: 0,
@@ -32,13 +34,30 @@ function CharacterDesign() {
         mind: 0
     });
 
-    //When entering, check if a newCharacter is being selected or if an old character is being edited, then set the UI up
+ 
     useEffect(() => {
-        if (name === "newCharacter") {
+        if (name !== "newCharacter") {
+            setCharacterName(name);
+            //Finds the character from the backend and sets the stats and image
+            const fetchCharacters = async () => {
+                try {
+                    const res = await fetch("http://localhost:5000/api/characters");
+                    const data = await res.json();
+                    setCharacterStorage(data);
+                    
+                    const char = data.find(c => c.characterName === name);
+                    if (char) {
+                        setCharacterStats(char.stats);
+                        setImgUrl(char.image);
+                    }
+                } catch (err) {
+                    console.error(err);
+                }
+            };
+            fetchCharacters();
+        } else {
             setEditNameVis(false);
             setCreateOverEdit(true);
-        } else {
-            setCharacterName(name);
         }
     }, [name]);
 
@@ -52,14 +71,12 @@ function CharacterDesign() {
 }
 
     //Purely for the bottom button and if it shows new character or edit character
-    function handleChangeCharacter() {  
-
-        //New character mode
-        if (createOverEdit===true && characterName !== "") {
-            setCreateOverEdit(false);
+    async function handleChangeCharacter() {  
+        if (uploading) {
+            alert("Please wait, image is still uploading...");
+            return;
         }
-
-        //Edit character mode
+        //Validation for character
         const newErrors={}
         Object.entries(characterStats).forEach(([key, value]) => {
             if (value === "" || isNaN(value)) {
@@ -69,42 +86,93 @@ function CharacterDesign() {
         if (!characterName || characterName.trim() === "") {
             newErrors.characterName = "Character name is required.";
         }
-        if (characterStorage.some(
-            w => w.characterName.toLowerCase() === characterName.trim().toLowerCase()
-        )) {
-            newErrors.duplicate = "A character with this name already exists.";
+        if (name !== characterName) {
+            const isDuplicate = characterStorage.some(
+                c => c &&
+                    c.characterName.toLowerCase() === characterName.trim().toLowerCase() &&
+                    c.characterName.toLowerCase() !== name.toLowerCase()
+            );
+            if (isDuplicate) newErrors.duplicate = "A character with this name already exists.";
         }
         if (Object.keys(newErrors).length > 0) {
             setErrors(newErrors);
-            setConfirmedName()
+            setTimeout(() => setErrors({}), 2000);
             return;
         }
-        setErrors({});
+        setErrors({});    
 
-        let confirmationMessage;
-        //Shows user that their user went through
-        if (createOverEdit) {
-            confirmationMessage = `${characterName} has been made!`;
-        } else {
-            confirmationMessage = `${characterName} has been edited`;
-        }
-        setConfirmedName(confirmationMessage);
-
-        setCharacterStorage(prev => [
-        ...prev,
-        {
+        //Create the character object to send to backend
+        const characterData = {
             characterName: characterName,
-            stats: {
-            ...characterStats
+            stats: characterStats,
+            image: imgUrl // <-- include the URL here
+        };
+
+        try {
+            //Decides to make a character if new, if not then edit it
+           if (createOverEdit) {
+                //Create new character
+                const res = await fetch("http://localhost:5000/api/characters", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(characterData)
+                });
+                const saved = await res.json();
+                setCharacterStorage(prev => [...prev, saved]);
+            } else {
+                //Edit existing character
+                const res = await fetch(`http://localhost:5000/api/characters/${name}`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(characterData)
+                });
+                const updated = await res.json();
+
+                //Update local storage array by matching the old name
+                setCharacterStorage(prev =>
+                    prev.map(c => c.characterName === name ? updated : c)
+                );
             }
+        } catch (err) {
+            console.error(err)
         }
-        ]);
-        console.log(characterStorage);
-        //To change with backend logic
+
+        navigate("/character-selection");
+        //Checks if the character is new, if so change it to edit from now on
+        if (createOverEdit===true) {
+            setCreateOverEdit(false);
+        }
     };
 
-    function handeImageUpload() {
-        //To change with backend logic
+    async function handleImageUpload(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        //Show local preview immediately
+        const localPreview = URL.createObjectURL(file);
+        setPreviewUrl(localPreview);
+
+        // Start loading
+        setUploading(true);
+
+        const formData = new FormData();
+        formData.append("file", file);
+
+        try {
+            const res = await fetch("http://localhost:5000/api/upload-image", {
+                method: "POST",
+                body: formData,
+            });
+            const data = await res.json();
+
+            setImgUrl(data.url);
+            //Remove preview once we have a hosted URL
+            setPreviewUrl(""); 
+        } catch (err) {
+            console.error("Error uploading image:", err);
+        } finally {
+            setUploading(false);
+        }   
     }
 
     return (
@@ -130,9 +198,6 @@ function CharacterDesign() {
                         autoFocus
                     />
                 )}
-                {confirmedName && (
-                        <div className="text-success">{confirmedName}</div>
-                    )}
                 {errors.characterName && (
                     <div className="text-danger">{errors.characterName}</div>
                 )}
@@ -141,15 +206,15 @@ function CharacterDesign() {
                 )}
                 <img
                     style={{ width: "200px", height: "200px", marginTop: "20px" }}
-                    src={NewCharacterPicture}
+                    src={previewUrl || imgUrl || NewCharacterPicture}  // pick preview first
                     alt="Character"
-                />
-
+                    />
+                {uploading && <div className="text-warning mt-2">Uploading image...</div>}
                 <div className="mt-3">
                     <Form.Control 
                         type="file" 
                         accept="image/*" 
-                        onChange={handeImageUpload}
+                        onChange={handleImageUpload}
                     />
                 </div>
             </div>

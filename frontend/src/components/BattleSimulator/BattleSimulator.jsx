@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Dropdown, Button, Card, Form } from "react-bootstrap";
-import blankPicture from "../../../images/characterImages/blank character.png";
-import CharacterCard from "../CharacterCard/CharacterCard";
-import Todd from "../../../images/characterImages/Todd.jpg"
+import blankPicture from "../../images/characterImages/blank character.png";
+import CharacterCard from "./CharacterCard/CharacterCard"
+
 
 function BattleSimulator() {
   const [actionsRemaining, setActionsRemaining] = useState([true, true, true]);
