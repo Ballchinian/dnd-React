@@ -41,7 +41,6 @@ function parseDmgDie(name, dmgDieNumbers) {
             newErrors.name = "Name is required";
         }
 
-
         if (!Number.isInteger(+diceRolled) || !dmgDieCheck) {
             newErrors.dmgDieNumbers = "Invalid damage die (e.g. 4d6+3)";
         }

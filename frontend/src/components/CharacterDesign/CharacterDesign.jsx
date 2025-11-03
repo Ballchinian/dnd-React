@@ -2,6 +2,7 @@ import { CardBody, Card, Button } from "react-bootstrap";
 import Form from "react-bootstrap/Form";
 import { useState, useEffect } from "react";
 import "./CharacterDesign.css";
+import CharacterSkills from "./CharacterSkills/CharacterSkills";
 import { useParams, useNavigate } from "react-router-dom";
 import NewCharacterPicture from "../../images/characterImages/blank character.png";
 
@@ -9,13 +10,13 @@ function CharacterDesign() {
     const navigate = useNavigate();
     
     //From url
-    let { name } = useParams();
-
+    let { initialName } = useParams();
     //Confirmation States
-    const [editNameVis, setEditNameVis] = useState(true);
-    const [createOverEdit, setCreateOverEdit] = useState(false);
+    const [editNameVis, setEditNameVis] = useState(initialName !== "newCharacter");
+    const [createOverEdit, setCreateOverEdit] = useState(initialName === "newCharacter");
     const [uploading, setUploading] = useState(false);
     const [errors, setErrors] = useState({})
+    const [editingSkills, setEditingSkills] = useState(false);
 
     //Show preview of image before upload
     const [previewUrl, setPreviewUrl] = useState("");
@@ -26,88 +27,123 @@ function CharacterDesign() {
     const [characterName, setCharacterName] = useState("");
     const [imgUrl, setImgUrl] = useState("")
     const [characterStats, setCharacterStats] = useState({
-        AC: 0,
-        athletics: 0,
+        ac: 0,
         health: 0,
         reflex: 0,
         fortitude: 0,
-        mind: 0
-    });
+        mind: 0,
+        athletics: 0,
+        skills: {
+            acrobatics: 0,
+            arcana: 0,
+            crafting: 0,
+            deception: 0,
+            diplomacy: 0,
+            intimidation: 0,
+            medicine: 0,
+            nature: 0,
+            occultism: 0,
+            performance: 0,
+            religion: 0,
+            society: 0,
+            stealth: 0,
+            survival: 0,
+            thievery: 0
+        }
+        });
 
- 
+    
+    //---Initialises characterStorage to find existing characters for duplication reasons---
     useEffect(() => {
-        if (name !== "newCharacter") {
-            setCharacterName(name);
-            //Finds the character from the backend and sets the stats and image
-            const fetchCharacters = async () => {
+        
+        const fetchCharacters = async () => {
                 try {
                     const res = await fetch("http://localhost:5000/api/characters");
                     const data = await res.json();
                     setCharacterStorage(data);
-                    
-                    const char = data.find(c => c.characterName === name);
-                    if (char) {
-                        setCharacterStats(char.stats);
-                        setImgUrl(char.image);
+                    //We search the database to find the old characters name
+                
+                
+                    //If its an existing character
+                    if (initialName !== "newCharacter") {
+                        setCharacterName(initialName);
+
+                        //Finds the character from the backend and sets the stats and image
+                        const char = data.find(c => c.characterName === initialName);
+
+                        if (char) {
+                            setCharacterStats(char.stats);
+                            setImgUrl(char.image);
+                        } 
                     }
                 } catch (err) {
                     console.error(err);
                 }
-            };
-            fetchCharacters();
-        } else {
-            setEditNameVis(false);
-            setCreateOverEdit(true);
-        }
-    }, [name]);
+        };
+        fetchCharacters();
+    }, [initialName]);
 
 
-    function handleCharacterInputChange(e) {
+    //For all the different fields not including characterName or skills
+     function handleStatChange(e) {
         const { name, value } = e.target;
-        setCharacterStats(prev => ({
-            ...prev,
-            [name]: value
-    }));
-}
-
-    //Purely for the bottom button and if it shows new character or edit character
+        setCharacterStats(prev => ({ ...prev, [name]: Number(value) }));
+    }
+    
     async function handleChangeCharacter() {  
         if (uploading) {
             alert("Please wait, image is still uploading...");
             return;
         }
-        //Validation for character
+
+        //---Errors!---
         const newErrors={}
+
+        //For stats not including skills
         Object.entries(characterStats).forEach(([key, value]) => {
+            if (value === "" || isNaN(value)) {
+                //skills is included in characterStats, must be iterated through seperatly
+                if (key!=="skills") {
+                    newErrors[key] = `${key} must be a number!`;
+                }
+            }
+        });
+
+        //For skills under skills
+        Object.entries(characterStats.skills).forEach(([key, value]) => {
             if (value === "" || isNaN(value)) {
                 newErrors[key] = `${key} must be a number!`;
             }
-        });
+        })
+
         if (!characterName || characterName.trim() === "") {
             newErrors.characterName = "Character name is required.";
         }
-        if (name !== characterName) {
+        
+        if (characterStorage.length > 0) {
             const isDuplicate = characterStorage.some(
-                c => c &&
+                c =>
+                    c &&
                     c.characterName.toLowerCase() === characterName.trim().toLowerCase() &&
-                    c.characterName.toLowerCase() !== name.toLowerCase()
-            );
+                    c.characterName.toLowerCase() !== initialName.toLowerCase()
+                );
             if (isDuplicate) newErrors.duplicate = "A character with this name already exists.";
+            
         }
+        console.log(newErrors);
+
         if (Object.keys(newErrors).length > 0) {
             setErrors(newErrors);
             setTimeout(() => setErrors({}), 2000);
             return;
         }
         setErrors({});    
-
         //Create the character object to send to backend
         const characterData = {
             characterName: characterName,
             stats: characterStats,
             image: imgUrl // <-- include the URL here
         };
-
         try {
             //Decides to make a character if new, if not then edit it
            if (createOverEdit) {
@@ -121,7 +157,7 @@ function CharacterDesign() {
                 setCharacterStorage(prev => [...prev, saved]);
             } else {
                 //Edit existing character
-                const res = await fetch(`http://localhost:5000/api/characters/${name}`, {
+                const res = await fetch(`http://localhost:5000/api/characters/${initialName}`, {
                     method: "PUT",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(characterData)
@@ -130,18 +166,20 @@ function CharacterDesign() {
 
                 //Update local storage array by matching the old name
                 setCharacterStorage(prev =>
-                    prev.map(c => c.characterName === name ? updated : c)
+                    prev.map(c => c.characterName === initialName ? updated : c)
                 );
+                
             }
+            //Checks if the character is new, if so change it to edit from now on
+            navigate("/character-selection");
+            if (createOverEdit) setCreateOverEdit(false);
         } catch (err) {
             console.error(err)
         }
 
-        navigate("/character-selection");
-        //Checks if the character is new, if so change it to edit from now on
-        if (createOverEdit===true) {
-            setCreateOverEdit(false);
-        }
+        
+        
+       
     };
 
     async function handleImageUpload(e) {
@@ -152,14 +190,14 @@ function CharacterDesign() {
         const localPreview = URL.createObjectURL(file);
         setPreviewUrl(localPreview);
 
-        // Start loading
+        //Start loading
         setUploading(true);
 
         const formData = new FormData();
-        formData.append("file", file);
+        formData.append("image", file);
 
         try {
-            const res = await fetch("http://localhost:5000/api/upload-image", {
+            const res = await fetch("http://localhost:5000/api/characters/upload", {
                 method: "POST",
                 body: formData,
             });
@@ -174,12 +212,27 @@ function CharacterDesign() {
             setUploading(false);
         }   
     }
+    
+    //For loading html forms
+    const renderStatForms = stat => (
+        <div>
+            <p>{stat.charAt(0).toUpperCase() + stat.slice(1)}</p>
+            <Form.Control
+                type="number"
+                name={stat}
+                value={characterStats[stat]}
+                onChange={handleStatChange} 
+            />
+            {errors.stat && (<div className="text-danger">{errors.stat}</div>)}
+        </div>
+    )
 
     return (
         <div className="d-flex flex-column align-items-center" style={{ width: "100%", paddingTop: "40px", paddingBottom: "40px" }}>
             
-            {/* Character Name + Image */}
+            {/*Character Name + Image*/}
             <div className="text-center mb-4">
+                {/*Listed name as an h1 element, convert to Form element on selection*/}
                 {editNameVis ? (
                     <h1 
                         style={{ cursor: "pointer" }} 
@@ -189,13 +242,14 @@ function CharacterDesign() {
                     </h1>
                     
                 ) : (
+                    //Listed name as an Form element, convert to h1 element on deselection
                     <Form.Control
                         type="text"
                         value={characterName}
                         onChange={(e) => setCharacterName(e.target.value)}
                         onBlur={() => { if (characterName.trim() !== "") setEditNameVis(true); }}
                         onKeyDown={(e) => { if (e.key === "Enter" && characterName.trim() !== "") setEditNameVis(true); }}
-                        autoFocus
+                        autoFocus={createOverEdit}
                     />
                 )}
                 {errors.characterName && (
@@ -209,6 +263,7 @@ function CharacterDesign() {
                     src={previewUrl || imgUrl || NewCharacterPicture}  // pick preview first
                     alt="Character"
                     />
+                {/*Updates user on the image still being loaded, cant exist unless its finished*/}
                 {uploading && <div className="text-warning mt-2">Uploading image...</div>}
                 <div className="mt-3">
                     <Form.Control 
@@ -219,89 +274,53 @@ function CharacterDesign() {
                 </div>
             </div>
 
-            {/* Stats row */}
-            <div className="d-flex justify-content-center mb-4" style={{ width: "80%" }}>
-                {/* Left card */}
-                <Card style={{ width:"200px", margin:"60px", height:"auto" }}>
-                    <CardBody>
-                        <h3>Stats</h3>
-
-                        <p>AC</p>
-                        <Form.Control 
-                            type="number" 
-                            name="AC" 
-                            value={characterStats.AC} 
-                            onChange={handleCharacterInputChange} 
-                        />
-                        {errors.AC && (
-                            <div className="text-danger">{errors.AC}</div>
-                        )}
-
-                        <p>Athletics</p>
-                        <Form.Control 
-                            type="number" 
-                            name="athletics"
-                            value={characterStats.athletics} 
-                            onChange={handleCharacterInputChange} 
-                        />
-                        {errors.athletics && (
-                            <div className="text-danger">{errors.athletics}</div>
-                        )}
-
-                        <p>Health</p>
-                        <Form.Control 
-                            type="number" 
-                            name="health"
-                            value={characterStats.health} 
-                            onChange={handleCharacterInputChange} 
-                        />
-                        {errors.health && (
-                            <div className="text-danger">{errors.health}</div>
-                        )}
-                    </CardBody>
-                </Card>
-
-                {/* Right card */}
-                <Card style={{ width:"200px", margin:"60px", height:"auto" }}>
-                    <CardBody>
-                        <h3>Saves</h3>
-
-                        <p>Reflex</p>
-                        <Form.Control 
-                            type="number" 
-                            name="reflex"
-                            value={characterStats.reflex} 
-                            onChange={handleCharacterInputChange} 
-                        />
-                        {errors.reflex && (
-                            <div className="text-danger">{errors.reflex}</div>
-                        )}
-
-                        <p>Fortitude</p>
-                        <Form.Control 
-                            type="number" 
-                            name="fortitude"
-                            value={characterStats.fortitude} 
-                            onChange={handleCharacterInputChange} 
-                        />
-                        {errors.fortitude && (
-                            <div className="text-danger">{errors.fortitude}</div>
-                        )}
-
-                        <p>Mind</p>
-                        <Form.Control 
-                            type="number" 
-                            name="mind"
-                            value={characterStats.mind} 
-                            onChange={handleCharacterInputChange} 
-                        />
-                        {errors.mind && (
-                            <div className="text-danger">{errors.mind}</div>
-                        )}
-                    </CardBody>
-                </Card>
+            {/*---Stats section---*/}
+            <div className="d-flex justify-content-center mb-4" style={{ width: "80%", flexWrap: "wrap" }}>
+                {!editingSkills && (
+                    <>
+                    {/* Left card */}
+                        <Card style={{ width:"200px", margin:"60px", height:"auto" }}>
+                            <CardBody>
+                                <h3>Stats</h3>
+                                {renderStatForms("ac")}
+                                {renderStatForms("health")}
+                                <Button
+                                    variant="success"
+                                    className="mt-5"
+                                    onClick={() => setEditingSkills(prev => !prev)}
+                                >
+                                    Edit Skills
+                                </Button>
+                            </CardBody>
+                        </Card>
+                    
+                        {/* Right card */}
+                        <Card style={{ width:"200px", margin:"60px", height:"auto" }}>
+                            <CardBody>
+                                <h3>Saves</h3>
+                                {renderStatForms("reflex")}
+                                {renderStatForms("fortitude")}
+                                {renderStatForms("mind")}
+                            </CardBody>
+                        </Card>
+                    </>
+                )}
+                
             </div>
-            {/* Bottom button */} 
+            
+            {/*---Skills section---*/}
+            <div style={{width:"100%"}}>
+                {/*Shows upon edit skills being pressed*/}
+                {editingSkills && (
+                    <CharacterSkills
+                        
+                        skills={characterStats.skills}
+                        setSkills={(newSkills) => setCharacterStats((prev) => ({ ...prev, skills: newSkills }))}
+                        setEditingSkills={setEditingSkills}
+                    />
+                )}
+            </div>
+            {/*---Edit/new character button---*/} 
             <Button 
                 style={{ width: "200px", marginTop: "40px", marginBottom: "40px" }} 
                 variant="dark" 

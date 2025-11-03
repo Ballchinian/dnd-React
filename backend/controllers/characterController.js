@@ -22,7 +22,6 @@ export const createCharacter = async (req, res) => {
 
 export const updateCharacter = async (req, res) => {
   try {
-    console.log("Body is:", req.body);
     const updated = await Character.findOneAndUpdate(
       { characterName: req.params.name },
       req.body,

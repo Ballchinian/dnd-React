@@ -12,7 +12,7 @@ function Homepage() {
         <p className="text-center mt-5">This is a simple calculator for tabletop players using pathfinder as a basis</p>
 
   
-        <div id="mainLinks" style={{margin:"80px"}} className="justify-content-around d-flex">
+        <div id="mainLinks" style={{margin:"250px 80px"}} className="justify-content-around d-flex">
           <NavLink to="/item-builder">
             <Card>
               <Card.Img variant="top" src={sword} />

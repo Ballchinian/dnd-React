@@ -1,43 +1,32 @@
-import {Button, Card , Dropdown, ButtonGroup} from 'react-bootstrap';
-import { useState } from 'react';
+import {Button, Card, Dropdown, ButtonGroup} from 'react-bootstrap';
+import {FaTrashAlt} from "react-icons/fa";
+import {useState, useEffect} from 'react';
 import parseDmgDie from "../utill/parseDmgDie";
 
-
-//How we are storing the weapons
-class Weapon {
-    constructor(weaponName, weaponHit, numRolled, diceRolled, modifier) {
-        this.weaponName = weaponName;
-        this.weaponHit = weaponHit;
-        this.numRolled = numRolled;
-        this.diceRolled = diceRolled;
-        this.modifier = modifier;
-    }
-    getWeaponName() {
-        return this.weaponName;
-    }
-    getWeaponHit() {
-        return this.weaponHit;
-    }
-    getDmgDieNumbers() {
-        return `${this.numRolled}d${this.diceRolled}+${this.modifier}`;
-    }
-}
-
 function WeaponBuilder() {
-
-    //UseStates both for adding and changing weapons
     const [weaponChoices, setWeaponChoices] = useState([]);
     const [weaponName, setWeaponName] = useState("");
-    const [dmgDieNumbers, setDmgDieNumbers] = useState("");
     const [weaponHit, setWeaponHit] = useState(0);
-    const [errors, setErrors] = useState("");
-
-    //UseState for ChangeWeapon
+    const [dmgDieNumbers, setDmgDieNumbers] = useState("");
+    const [errors, setErrors] = useState({});
     const [selectedWeaponName, setSelectedWeaponName] = useState("Select weapon to change");
-
-    //UseState for swapping between AddWeapon and ChangeWeapon
     const [divVisibility, setDivVisibility] = useState(false);
 
+    //FetchWeaponsFromBackendOnMount
+    useEffect(() => {
+        async function fetchWeapons() {
+            try {
+                const res = await fetch("http://localhost:5000/api/items");
+                const data = await res.json();
+                setWeaponChoices(data.weapons);
+            } catch (err) {
+                console.error("FailedToFetchWeapons:", err);
+            }
+        }
+        fetchWeapons();
+    }, []);
+
+    //ResetFormValues
     function resetValues() {
         setWeaponHit(0);
         setDmgDieNumbers("");
@@ -46,122 +35,118 @@ function WeaponBuilder() {
         setSelectedWeaponName("Select weapon to change");
     }
 
-    //Handles input changes for both adding and changing weapons
+    //HandleInputChanges
     function handleWeaponInputChange(e) {
-        const { name, value } = e.target;
-            if (name === "weaponName") setWeaponName(value);
-            if (name === "weaponHit") setWeaponHit(value);
-            if (name === "dmgDieNumbers") setDmgDieNumbers(value);
+        const {name, value} = e.target;
+        if (name === "weaponName") setWeaponName(value);
+        if (name === "weaponHit") setWeaponHit(value);
+        if (name === "dmgDieNumbers") setDmgDieNumbers(value);
     }
 
-    //Swaps between AddWeapon and ChangeWeapon
+    //ToggleAddOrEditSection
     function handleSwapWeaponUI() {
         setDivVisibility(!divVisibility);
         resetValues();
     }
 
-    function handleSaveWeapon() {
-        const newErrors={}
-        //Validate & parse damage dice
+    //SaveWeaponToBackend
+    async function handleSaveWeapon() {
+        const newErrors = {};
         const result = parseDmgDie(weaponName, dmgDieNumbers);
 
-        //Check for errors (made it so multiple errors can show up at once using object newErrors)
-        if (weaponChoices.some(
-            w => w.getWeaponName().toLowerCase() === weaponName.trim().toLowerCase() &&
-                w.getWeaponName() !== selectedWeaponName
+        //CheckForDuplicateAndValidationErrors
+        if (weaponChoices.some(w =>
+            w.weaponName.toLowerCase() === weaponName.trim().toLowerCase() &&
+            w.weaponName !== selectedWeaponName
         )) {
-            newErrors.duplicate = "A weapon with this name already exists.";
+            newErrors.duplicate = "A Weapon With This Name Already Exists.";
         }
         if (weaponHit === "" || isNaN(weaponHit)) {
-            newErrors.weaponHit = "Hit value must be a number.";
+            newErrors.weaponHit = "Hit Value Must Be A Number.";
         }
-        if (result.errors) {
-            Object.assign(newErrors, result.errors);
-        }
+        if (result.errors) Object.assign(newErrors, result.errors);
 
-        // If any errors, set them and stop
         if (Object.keys(newErrors).length > 0) {
             setErrors(newErrors);
             return;
         }
         setErrors({});
 
-        //No errors, extract values
-        const { numRolled, diceRolled, modifier } = result;
+        const {numRolled, diceRolled, modifier} = result;
+        const payload = {weaponName, weaponHit, numRolled, diceRolled, modifier};
 
-        //Create a new weapon object
-        const newWeapon = new Weapon(
-            weaponName,
-            weaponHit,
-            numRolled,
-            diceRolled,
-            modifier
-        );
-
-
-        setWeaponChoices((prev) => {
-            
-            
-            //Find existing weapon index (if any) by its original name
-            const index = prev.findIndex(weapon => weapon.getWeaponName() === selectedWeaponName);
-
-            if (index !== -1 && selectedWeaponName !== "Select weapon to change") {
-                //UPDATE MODE
-                const updated = [...prev];
-                updated[index] = newWeapon;
-                return updated;
+        try {
+            if (selectedWeaponName !== "Select weapon to change") {
+                //UpdateExistingWeapon
+                await fetch("http://localhost:5000/api/items/weapon", {
+                    method: "PUT",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify({originalName: selectedWeaponName, ...payload})
+                });
+            } else {
+                //AddNewWeapon
+                await fetch("http://localhost:5000/api/items/weapon", {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify(payload)
+                });
             }
-
-            //ADD MODE
-            return [...prev, newWeapon];
-        });
-
-        //Reset form
-        resetValues();
+            //RefreshWeaponList
+            const refreshRes = await fetch("http://localhost:5000/api/items");
+            const data = await refreshRes.json();
+            setWeaponChoices(data.weapons);
+            resetValues();
+        } catch (err) {
+            console.error(err);
+            setErrors({api: err.message});
+        }
     }
 
-   
-    return <div>
-            {/* Add Weapon Section */}
-            {/* className is flex column and display is flex to place buttons at end */}
-            <Card className="flex-column" id="addWeaponSection" style={{ display: divVisibility ? 'none' : 'flex' }}>
-                <h2 className="text-center">Add Weapon</h2>    
+    //DeleteWeaponFromBackend
+    async function handleDeleteWeapon(name) {
+        try {
+            const res = await fetch("http://localhost:5000/api/items", {
+                method: "DELETE",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({type: "weapon", name})
+            });
+            if (!res.ok) throw new Error("FailedToDeleteWeapon");
+
+            //RefreshWeaponList
+            const refreshRes = await fetch("http://localhost:5000/api/items");
+            const data = await refreshRes.json();
+            setWeaponChoices(data.weapons);
+            resetValues();
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    return (
+        <div>
+            {/*AddWeaponSection*/}
+            <Card className="flex-column" style={{display: divVisibility ? 'none' : 'flex'}}>
+                <h2 className="text-center">Add Weapon</h2>
                 <ol>
-
-                    {/* Input fields for adding a weapon with error validation*/}
-                    <li>Name<input type="text" value={weaponName} name="weaponName" onChange={handleWeaponInputChange} ></input></li>
-                    {errors.name && (
-                        <div className="text-danger">{errors.name}</div>
-                    )}
-                    {errors.duplicate && (
-                        <div className="text-danger">{errors.duplicate}</div>
-                    )}
-
-                    <li>Hit Die<input type="number" value={weaponHit}  name="weaponHit" onChange={handleWeaponInputChange}></input></li>
-                    {errors.weaponHit && (
-                        <div className="text-danger">{errors.weaponHit}</div>
-                    )}
-
-                    <li>Damage Die<input type="text" name="dmgDieNumbers" value={dmgDieNumbers} onChange={handleWeaponInputChange}></input></li>
-                    {errors.dmgDieNumbers && (
-                        <div className="text-danger">{errors.dmgDieNumbers}</div>
-                    )}
+                    <li>Name<input type="text" value={weaponName} name="weaponName" onChange={handleWeaponInputChange}/></li>
+                    {errors.duplicate && <div className="text-danger">{errors.duplicate}</div>}
+                    <li>Hit Die<input type="number" value={weaponHit} name="weaponHit" onChange={handleWeaponInputChange}/></li>
+                    {errors.weaponHit && <div className="text-danger">{errors.weaponHit}</div>}
+                    <li>Damage Die<input type="text" name="dmgDieNumbers" value={dmgDieNumbers} onChange={handleWeaponInputChange}/></li>
+                    {errors.dmgDieNumbers && <div className="text-danger">{errors.dmgDieNumbers}</div>}
+                    {errors.api && <div className="text-danger">{errors.api}</div>}
                 </ol>
-
-                <Button onClick={ handleSaveWeapon }>Add Weapon</Button>
-                <Button className="mt-5" onClick={ handleSwapWeaponUI }>Edit previous Weapons</Button>
+                <Button onClick={handleSaveWeapon}>Add Weapon</Button>
+                <Button className="mt-3" onClick={handleSwapWeaponUI}>Edit Previous Weapons</Button>
             </Card>
 
-            {/* Change Weapon Section */}
-            {/* className is flex column and display is flex to place buttons at end */}
-            <Card className="flex-column" id="changeWeaponSection" style={{ display: divVisibility ? 'flex' : 'none' }}>
+            {/*ChangeWeaponSection*/}
+            <Card className="flex-column" style={{display: divVisibility ? 'flex' : 'none'}}>
                 <h2 className="text-center">Change Weapon</h2>
 
-                {/* Dropdown for selecting weapon to change, align items is to lower it in line for dropbox*/}
-                <ButtonGroup className="d-flex align-items-end">
-                    {/* Left side: input for renaming weapon */}
+                <ButtonGroup className="d-flex align-items-end mb-3">
                     <input
-                        placeholder={selectedWeaponName} 
+                        placeholder={selectedWeaponName}
                         name="weaponName"
                         type="text"
                         className="form-control"
@@ -169,50 +154,47 @@ function WeaponBuilder() {
                         onChange={handleWeaponInputChange}
                         disabled={selectedWeaponName === "Select weapon to change"}
                     />
-
-                    {/* Right side: dropdown toggle */}
                     <Dropdown
                         as={ButtonGroup}
                         onSelect={(selectedIndex) => {
                             const weapon = weaponChoices[selectedIndex];
-                            setSelectedWeaponName(weapon.getWeaponName());
-                            setWeaponName(weapon.getWeaponName());
-                            setDmgDieNumbers(weapon.getDmgDieNumbers());
-                            setWeaponHit(weapon.getWeaponHit());              
+                            setSelectedWeaponName(weapon.weaponName);
+                            setWeaponName(weapon.weaponName);
+                            setDmgDieNumbers(`${weapon.numRolled}d${weapon.diceRolled}+${weapon.modifier}`);
+                            setWeaponHit(weapon.weaponHit);
                         }}
                     >
-                        <Dropdown.Toggle split id="dropdown-split-basic" />
-
+                        <Dropdown.Toggle split id="dropdown-split-basic"/>
                         <Dropdown.Menu>
                             {weaponChoices.map((weapon, index) => (
-                                <Dropdown.Item key={index} eventKey={index}>
-                                    {weapon.getWeaponName()}
-                                </Dropdown.Item>
+                                <Dropdown.Item key={index} eventKey={index}>{weapon.weaponName}</Dropdown.Item>
                             ))}
                         </Dropdown.Menu>
                     </Dropdown>
                 </ButtonGroup>
 
                 <ol>
-                    <li>Hit Die<input type="text" value={weaponHit}  name="weaponHit" onChange={handleWeaponInputChange}></input></li>
-                    {errors.weaponHit && (
-                        <div className="text-danger">{errors.weaponHit}</div>
-                    )}
-
-                    <li>Damage Die<input type="text" name="dmgDieNumbers" value={dmgDieNumbers} onChange={handleWeaponInputChange}></input></li>
-                    {errors.dmgDieNumbers && (
-                        <div className="text-danger">{errors.dmgDieNumbers}</div>
-                    )}
+                    <li>Hit Die<input type="text" value={weaponHit} name="weaponHit" onChange={handleWeaponInputChange}/></li>
+                    <li>Damage Die<input type="text" name="dmgDieNumbers" value={dmgDieNumbers} onChange={handleWeaponInputChange}/></li>
                 </ol>
-                    
-                <Button onClick={ handleSaveWeapon }>Change Weapon</Button>
-                <Button className="mt-5" onClick={ handleSwapWeaponUI }>Add new Weapons</Button>
+
+                <div className="d-flex justify-content-between">
+                    <Button className="p-2 w-100" onClick={handleSaveWeapon}>Change Weapon</Button>
+                    {selectedWeaponName !== "Select weapon to change" && (
+                        <Button
+                            variant="danger"
+                            onClick={() => handleDeleteWeapon(selectedWeaponName)}
+                            style={{display: "flex", alignItems: "center", gap: "10px"}}
+                        >
+                            <FaTrashAlt/> Delete
+                        </Button>
+                    )}
+                </div>
+
+                <Button className="mt-3" onClick={handleSwapWeaponUI}>Add New Weapons</Button>
             </Card>
-
-
-    </div>
+        </div>
+    );
 }
 
-
 export default WeaponBuilder;
-

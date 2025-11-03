@@ -2,6 +2,7 @@ import './CharacterSelection.css';
 import { useNavigate } from "react-router-dom";
 import { Card, Button, Form } from 'react-bootstrap';
 import React, { useState, useEffect } from 'react';
+import { FaTrash } from 'react-icons/fa';
 import characterImageTemplate from "../../images/characterImages/blank character.png";
 
 function CharacterSelection() {
@@ -49,6 +50,29 @@ function CharacterSelection() {
         setIndex(0);
     };
 
+    const handleDeleteCharacter = async (characterName) => {
+        if (!window.confirm(`Are you sure you want to delete "${characterName}"?`)) return;
+
+        try {
+            const res = await fetch(`http://localhost:5000/api/characters/${characterName}`, {
+                method: "DELETE",
+            });
+
+            if (res.ok) {
+                //Remove character from frontend lists
+                setCharacters(prev => prev.filter(c => c.name !== characterName));
+                setFilteredCharacters(prev => prev.filter(c => c.name !== characterName));
+
+                //Adjust index if it’s too high
+                setIndex(0)
+            } else {
+                console.error("Failed to delete character");
+            }
+        } catch (err) {
+            console.error("Error deleting character:", err);
+        }
+    };
+
     //Number of filtered characters
     const characterLength = filteredCharacters.length; 
     const handleCharacterSelect = (characterName) => {
@@ -85,30 +109,60 @@ function CharacterSelection() {
             {/*character carousel*/}
             <div className="d-flex justify-content-center align-items-center">
                 <div className="d-flex">
-                    <Button variant="secondary" onClick={prev}>Prev</Button>
-                    <div className="d-flex overflow-hidden" style={{ width: "900px" }}>
-                        {filteredCharacters.map((character) => (
-                            <Card
-                                className="d-flex align-items-center justify-content-center"
-                                key={character.name}
-                                style={{
-                                    height: "35vh",
-                                    width: "300px",
-                                    flex: "0 0 auto",
-                                    transform: `translateX(${-index * 300}px)`,
-                                    margin: "0"
-                                }}
-                                onClick={() => handleCharacterSelect(character.name)}
-                            >
-                                <Card.Header>{character.name}</Card.Header>
-                                <Card.Img
-                                    style={{ width: "225px", height: "180px", objectFit: "contain" }}
-                                    src={character.image}
-                                />
-                            </Card>
-                        ))}
+
+                    {/*Show prev button only if there are 3 or more characters */}
+                    {characterLength >= 4 && (
+                        <Button variant="secondary" onClick={prev}>Prev</Button>
+                    )}
+
+                    <div className="carousel-wrapper" style={{ width: "900px", overflow: "hidden" }}>
+                        <div
+                            className="d-flex "
+                            style={{ transform: `translateX(-${index * 300}px)`, transition: "transform 0.3s ease"}}
+                        >
+                            {filteredCharacters.map((character) => (
+                                <Card
+                                    className="d-flex align-items-center"
+                                    key={character.name}
+                                    style={{
+                                        
+                                        height: "35vh",
+                                        width: "300px",
+                                        flex: "0 0 300px",                  
+                                        margin: "0"
+                                    }}
+                                    
+                                >
+                                    <Card.Header>{character.name}</Card.Header>
+                                    <Card.Img
+                                        style={{ width: "225px", height: "180px", objectFit: "contain"}}
+                                        src={character.image}
+                                        onClick={() => handleCharacterSelect(character.name)}
+                                        onMouseEnter={(e) => e.currentTarget.style.transform = `scale(1.05)`}
+                                        onMouseLeave={(e) => e.currentTarget.style.transform = `scale(1)`}
+                                    />
+                                    <Button
+                                        variant="danger"
+                                        style={{
+                                            display: "flex",
+                                            justifyContent: "center",
+                                            alignItems: "center",
+                                            marginTop: "auto"
+                                        }}
+                                        onClick={() => handleDeleteCharacter(character.name)}
+                                    >
+                                        <FaTrash style={{ marginRight: "8px" }} />
+                                        Delete
+                                    </Button>
+                                </Card>
+                                
+                            ))}
+                        </div>
                     </div>
-                    <Button variant="secondary" onClick={next}>Next</Button>
+                    {/*Show prev button only if there are 3 or more characters */}
+                    {characterLength >= 4 && (
+                        <Button variant="secondary" onClick={next}>Next</Button>
+                    )}
                 </div>
             </div>
             {/*bottom button*/}

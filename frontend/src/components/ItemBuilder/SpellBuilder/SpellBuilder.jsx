@@ -1,52 +1,31 @@
-import { Dropdown, ButtonGroup, Form, Button, Card } from "react-bootstrap";
-import { useState } from 'react';
+import {Button, Card, Dropdown, ButtonGroup, Form} from "react-bootstrap";
+import {FaTrashAlt} from "react-icons/fa";
+import {useState, useEffect} from "react";
 import parseDmgDie from "../utill/parseDmgDie";
 
-//How we are storing the spells
-class Spell {
-    constructor(spellName, DC, saveType, AoE, numRolled, diceRolled, modifier) {
-        this.spellName = spellName;
-        this.DC = DC; //Replaces Hit Die
-        this.saveType = saveType; //Mind/Reflex/Fort
-        this.AoE = AoE; //Boolean Yes/No
-        this.numRolled = numRolled;
-        this.diceRolled = diceRolled;
-        this.modifier = modifier;
-    }
-
-    getSpellName() {
-        return this.spellName;
-    }
-    getDC() {
-        return this.DC;
-    }
-    getSaveType() {
-        return this.saveType;
-    }
-    getAoE() {
-        return this.AoE;
-    }
-    getDmgDieNumbers() {
-        return `${this.numRolled}d${this.diceRolled}+${this.modifier}`;
-    }
-}
-
 function SpellBuilder() {
-
-    //UseStates both for adding and changing spells
     const [spellChoices, setSpellChoices] = useState([]);
     const [spellName, setSpellName] = useState("");
-    const [DC, setDC] = useState(0); 
-    const [saveType, setSaveType] = useState("Mind"); //Default Mind
-    const [AoE, setAoE] = useState(false); //Boolean toggle
+    const [DC, setDC] = useState(0);
+    const [saveType, setSaveType] = useState("Mind");
+    const [AoE, setAoE] = useState(false);
     const [dmgDieNumbers, setDmgDieNumbers] = useState("");
     const [errors, setErrors] = useState({});
-
-    //UseState for ChangeSpell
     const [selectedSpellName, setSelectedSpellName] = useState("Select spell to change");
-
-    //UseState for swapping between AddSpell and ChangeSpell
     const [divVisibility, setDivVisibility] = useState(false);
+
+    useEffect(() => {
+        async function fetchSpells() {
+            try {
+                const res = await fetch("http://localhost:5000/api/items");
+                const data = await res.json();
+                setSpellChoices(data.spells || []);
+            } catch (err) {
+                console.error("FailedToFetchSpells:", err);
+            }
+        }
+        fetchSpells();
+    }, []);
 
     function resetValues() {
         setDC(0);
@@ -58,219 +37,213 @@ function SpellBuilder() {
         setSelectedSpellName("Select spell to change");
     }
 
-    //Handles input changes for both adding and changing spells
     function handleSpellInputChange(e) {
-        const { name, value, checked } = e.target;
+        const {name, value, checked} = e.target;
         if (name === "spellName") setSpellName(value);
         if (name === "DC") setDC(value);
-        if ((name === "addSaveType" || (name === "changeSaveType"))) setSaveType(value);
-        if (name === "AoE") setAoE(checked); //Toggle switch
+        if (name === "addSaveType" || name === "changeSaveType") setSaveType(value);
+        if (name === "AoE") setAoE(checked);
         if (name === "dmgDieNumbers") setDmgDieNumbers(value);
     }
 
-    //Swaps between AddSpell and ChangeSpell
     function handleSwapSpellUI() {
         setDivVisibility(!divVisibility);
         resetValues();
     }
 
-    function handleSaveSpell() {
-        const newErrors={}
-        //Validate & parse damage dice
+    async function handleSaveSpell() {
+        const newErrors = {};
         const result = parseDmgDie(spellName, dmgDieNumbers);
-        
-        if (spellChoices.some(
-            w => w.getSpellName().toLowerCase() === spellName.trim().toLowerCase() &&
-                w.getSpellName() !== selectedSpellName
+
+        if (spellChoices.some(s => 
+            s.spellName.toLowerCase() === spellName.trim().toLowerCase() &&
+            s.spellName !== selectedSpellName
         )) {
-            newErrors.duplicate = "A spell with this name already exists.";
+            newErrors.duplicate = "A Spell With This Name Already Exists.";
         }
         if (DC === "" || isNaN(DC)) {
-            newErrors.DC = "Hit value must be a number.";
+            newErrors.DC = "DC Value Must Be A Number.";
         }
-        if (result.errors) {
-            Object.assign(newErrors, result.errors);
-        }
+        if (result.errors) Object.assign(newErrors, result.errors);
 
-        // If any errors, set them and stop
         if (Object.keys(newErrors).length > 0) {
             setErrors(newErrors);
             return;
         }
         setErrors({});
 
-        //No errors, extract values
-        const { numRolled, diceRolled, modifier } = result;
+        const {numRolled, diceRolled, modifier} = result;
+        const payload = {spellName, DC, saveType, AoE, numRolled, diceRolled, modifier};
 
-        //Build the spell object
-        const newSpell = new Spell(
-            spellName,
-            DC,
-            saveType,
-            AoE,
-            numRolled,
-            diceRolled,
-            modifier
-        );
-
-        //Decide whether to ADD or UPDATE
-        setSpellChoices((prev) => {
-            //Find existing spell index (if any) by its original name
-            const index = prev.findIndex(spell => spell.getSpellName() === selectedSpellName);
-
-            if (index !== -1 && selectedSpellName !== "Select spell to change") {
-                //UPDATE MODE
-                const updated = [...prev];
-                updated[index] = newSpell;
-                return updated;
+        try {
+            //Edit a previous spell
+            if (selectedSpellName !== "Select spell to change") {
+                await fetch("http://localhost:5000/api/items/spell", {
+                    method: "PUT",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify({originalName: selectedSpellName, ...payload})
+                });
+            //Add a spell
+            } else {
+                await fetch("http://localhost:5000/api/items/spell", {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify(payload)
+                });
             }
 
-            //ADD MODE
-            return [...prev, newSpell];
-        });
-
-        //Reset form
-        resetValues();
+            const refreshRes = await fetch("http://localhost:5000/api/items");
+            const data = await refreshRes.json();
+            setSpellChoices(data.spells);
+            resetValues();
+        } catch (err) {
+            console.error(err);
+            setErrors({api: err.message});
+        }
     }
 
+    async function handleDeleteSpell(name) {
+        try {
+            await fetch("http://localhost:5000/api/items", {
+                method: "DELETE",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({type: "spell", name})
+            });
+            const refreshRes = await fetch("http://localhost:5000/api/items");
+            const data = await refreshRes.json();
+            setSpellChoices(data.spells);
+            resetValues();
+        } catch (err) {
+            console.error(err);
+        }
+    }
 
-    return <div>
-        {/* Add Spell Section */}
-        {/* className is flex column and display is flex to place buttons at end */}
-        <Card className="flex-column" id="addSpellSection" style={{ display: divVisibility ? 'none' : 'flex' }}>
-            <h2 className="text-center">Add Spell</h2>    
-            <ol>
-
-                {/* Input fields for adding a spell with error validation*/}
-                <li>Name<input type="text" value={spellName} name="spellName" onChange={handleSpellInputChange} /></li>
-                {errors.name && (
-                    <div className="text-danger">{errors.name}</div>
-                )}
-                {errors.duplicate && (
-                        <div className="text-danger">{errors.duplicate}</div>
-                    )}
-
-                <li>DC<input type="number" value={DC} name="DC" onChange={handleSpellInputChange} /></li>
-                {errors.DC && (
-                    <div className="text-danger">{errors.DC}</div>
-                )}
-
-                {/* Save Type Radio Buttons */}
-                <li>
-                    Save Type:
-                    {["Mind","Reflex","Fort"].map((type) => (
-                        <Form.Check 
-                            key={type}
-                            id={`addRadio${type}`}
-                            type="radio"
-                            label={type}
-                            name="addSaveType"                
-                            value={type}                  
-                            checked={saveType === type} 
-                            onChange={handleSpellInputChange}
-                        />
-                    ))}
-                </li>
-
-                {/* AoE Toggle Switch */}
-                <li>
-                    AoE (Area Effect):
-                    <Form.Check 
-                        type="switch"
-                        id="aoeAdd"
-                        name="AoE"
-                        checked={AoE}
-                        onChange={handleSpellInputChange}
-                    />
-                </li>
-
-                {/* Damage Die Input */}
-                <li>Damage Die<input type="text" name="dmgDieNumbers" value={dmgDieNumbers} onChange={handleSpellInputChange} /></li>
-                {errors.dmgDieNumbers && <div className="text-danger">{errors.dmgDieNumbers}</div>}
-            </ol>
-
-            <Button className="mt-4" onClick={handleSaveSpell}>Add Spell</Button>
-            <Button className="mt-5" onClick={handleSwapSpellUI}>Edit previous Spells</Button>
-        </Card>
-
-        {/* Change Spell Section */}
-        <Card id="changeSpellSection" style={{ display: divVisibility ? 'flex' : 'none' }}>
-            <h2 className="text-center">Change Spell</h2>
-
-            {/* Dropdown for selecting spell to change */}
-            <ButtonGroup className="d-flex align-items-end">
-                <input
-                    placeholder={selectedSpellName} 
-                    name="spellName"
-                    type="text"
-                    className="form-control"
-                    value={spellName}
-                    onChange={handleSpellInputChange}
-                    disabled={selectedSpellName === "Select spell to change"}
-                />
-                <Dropdown
-                    as={ButtonGroup}
-                    onSelect={(selectedIndex) => {
-                        const spell = spellChoices[selectedIndex];
-                        setSelectedSpellName(spell.getSpellName());
-                        setSpellName(spell.getSpellName());
-                        setDC(spell.getDC());
-                        setSaveType(spell.getSaveType());
-                        setAoE(spell.getAoE());
-                        setDmgDieNumbers(spell.getDmgDieNumbers());
-                    }}
-                >
-                    <Dropdown.Toggle split id="dropdown-split-basic" />
-                    <Dropdown.Menu>
-                        {spellChoices.map((spell, index) => (
-                            <Dropdown.Item key={index} eventKey={index}>
-                                {spell.getSpellName()}
-                            </Dropdown.Item>
+    return (
+        <div>
+            {/*AddSpell*/}
+            <Card className="flex-column" style={{display: divVisibility ? 'none' : 'flex'}}>
+                <h2 className="text-center">Add Spell</h2>
+                <ol>
+                    <li>Name<input type="text" value={spellName} name="spellName" onChange={handleSpellInputChange}/></li>
+                    {errors.duplicate && <div className="text-danger">{errors.duplicate}</div>}
+                    <li>DC<input type="number" value={DC} name="DC" onChange={handleSpellInputChange}/></li>
+                    {errors.DC && <div className="text-danger">{errors.DC}</div>}
+                    <li>
+                        Save Type:
+                        {["Mind","Reflex","Fort"].map(type => (
+                            <Form.Check
+                                key={type}
+                                id={`addRadio${type}`}
+                                type="radio"
+                                label={type}
+                                name="addSaveType"
+                                value={type}
+                                checked={saveType === type}
+                                onChange={handleSpellInputChange}
+                            />
                         ))}
-                    </Dropdown.Menu>
-                </Dropdown>
-            </ButtonGroup>
-
-            <ol>
-                <li>DC<input type="number" value={DC} name="DC" onChange={handleSpellInputChange} /></li>
-                {errors.DC && (
-                    <div className="text-danger">{errors.DC}</div>
-                )}
-                
-                <li>
-                    Save Type:
-                    {["Mind","Reflex","Fort"].map((type) => (
-                        <Form.Check 
-                            key={type}
-                            id={`changeRadio${type}`}
-                            type="radio"
-                            label={type}
-                            name="changeSaveType"
-                            value={type}
-                            checked={saveType === type}
+                    </li>
+                    <li>
+                        AoE:
+                        <Form.Check
+                            type="switch"
+                            id="aoeAdd"
+                            name="AoE"
+                            checked={AoE}
                             onChange={handleSpellInputChange}
                         />
-                    ))}
-                </li>
-                <li>
-                    AoE (Area Effect):
-                    <Form.Check
-                        type="switch"
-                        id="aoeChange"
-                        name="AoE"
-                        checked={AoE}
+                    </li>
+                    <li>Damage Die<input type="text" name="dmgDieNumbers" value={dmgDieNumbers} onChange={handleSpellInputChange}/></li>
+                    {errors.dmgDieNumbers && <div className="text-danger">{errors.dmgDieNumbers}</div>}
+                    {errors.api && <div className="text-danger">{errors.api}</div>}
+                </ol>
+                <Button onClick={handleSaveSpell}>Add Spell</Button>
+                <Button className="mt-3" onClick={handleSwapSpellUI}>Edit Previous Spells</Button>
+            </Card>
+
+            {/*ChangeSpell*/}
+            <Card className="flex-column" style={{display: divVisibility ? 'flex' : 'none'}}>
+                <h2 className="text-center">Change Spell</h2>
+                <ButtonGroup className="d-flex align-items-end mb-3">
+                    <input
+                        placeholder={selectedSpellName}
+                        name="spellName"
+                        type="text"
+                        className="form-control"
+                        value={spellName}
                         onChange={handleSpellInputChange}
-
+                        disabled={selectedSpellName === "Select spell to change"}
                     />
-                </li>
-                <li>Damage Die<input type="text" name="dmgDieNumbers" value={dmgDieNumbers} onChange={handleSpellInputChange} /></li>
-                {errors.dmgDieNumbers && <div className="text-danger">{errors.dmgDieNumbers}</div>}  
-            </ol>
+                    <Dropdown
+                        as={ButtonGroup}
+                        onSelect={(selectedIndex) => {
+                            const spell = spellChoices[selectedIndex];
+                            setSelectedSpellName(spell.spellName);
+                            setSpellName(spell.spellName);
+                            setDC(spell.DC);
+                            setSaveType(spell.saveType);
+                            setAoE(spell.AoE);
+                            setDmgDieNumbers(`${spell.numRolled}d${spell.diceRolled}+${spell.modifier}`);
+                        }}
+                    >
+                        <Dropdown.Toggle split id="dropdown-split-basic"/>
+                        <Dropdown.Menu>
+                            {spellChoices.map((spell, idx) => (
+                                <Dropdown.Item key={idx} eventKey={idx}>{spell.spellName}</Dropdown.Item>
+                            ))}
+                        </Dropdown.Menu>
+                    </Dropdown>
+                </ButtonGroup>
 
-            <Button className="mt-4" onClick={handleSaveSpell}>Change Spell</Button>
-            <Button className="mt-5" onClick={handleSwapSpellUI}>Add new Spells</Button>
-        </Card>
-    </div>
+                <ol>
+                    <li>DC<input type="number" value={DC} name="DC" onChange={handleSpellInputChange}/></li>
+                    <li>
+                        Save Type:
+                        {["Mind","Reflex","Fort"].map(type => (
+                            <Form.Check
+                                key={type}
+                                id={`changeRadio${type}`}
+                                type="radio"
+                                label={type}
+                                name="changeSaveType"
+                                value={type}
+                                checked={saveType === type}
+                                onChange={handleSpellInputChange}
+                            />
+                        ))}
+                    </li>
+                    <li>
+                        AoE:
+                        <Form.Check
+                            type="switch"
+                            id="aoeChange"
+                            name="AoE"
+                            checked={AoE}
+                            onChange={handleSpellInputChange}
+                        />
+                    </li>
+                    <li>Damage Die<input type="text" name="dmgDieNumbers" value={dmgDieNumbers} onChange={handleSpellInputChange}/></li>
+                </ol>
+
+                <div className="d-flex justify-content-between">
+                    <Button className="p-2 w-100" onClick={handleSaveSpell}>Save Changes</Button>
+                    {selectedSpellName !== "Select spell to change" && (
+                        <Button
+                            variant="danger"
+                            onClick={() => handleDeleteSpell(selectedSpellName)}
+                            style={{display: "flex", alignItems: "center", gap: "10px"}}
+                        >
+                            <FaTrashAlt/> Delete
+                        </Button>
+                    )}
+                </div>
+
+                <Button className="mt-3" onClick={handleSwapSpellUI}>Add New Spells</Button>
+
+                
+            </Card>
+        </div>
+    );
 }
 
 export default SpellBuilder;
