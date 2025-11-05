@@ -7,7 +7,7 @@ export const resolveSkillAction = (actionModule, attacker, defender, avgOrLuck =
     const type = actionModule.type;
     let roll = "-", outcomeText = "", outcome, outcomes, outcomeKey;
     let check, playerSkill, foeDefense;
-
+    let actionText
     //---Skill Check! Only if we have a vs do we need these values---
     if (type === "skill") {
         ({ check, outcomes } = actionModule)
@@ -30,7 +30,7 @@ export const resolveSkillAction = (actionModule, attacker, defender, avgOrLuck =
         const isAttacker = effect.target === "attacker";
         const targetName = isAttacker ? attacker.name : defender.name;
         const targetStats = isAttacker ? updatedAttacker : updatedDefender;
-        const targetEffects = targetStats.effects;
+        let targetEffects = targetStats.effects;
 
         switch (effect.type) {
         case "damage":
@@ -57,13 +57,16 @@ export const resolveSkillAction = (actionModule, attacker, defender, avgOrLuck =
             const targetHasEffect = targetEffects.includes(effect.value);
 
             //Determine action text and update targetEffects
-            const actionText = effect.type === "condition"
+            actionText = effect.type === "condition"
                 ? (targetHasEffect ? "already has" : "gains")
                 : (targetHasEffect ? "removes" : "doesn't have");
 
             //Apply effect if needed
             if (effect.type === "condition" && !targetHasEffect) targetEffects.push(effect.value);
-            if (effect.type === "removeCondition" && targetHasEffect) targetEffects = targetEffects.filter(e => e !== effect.value);
+            if (effect.type === "removeCondition" && targetHasEffect) {
+                targetEffects = targetEffects.filter(e => e !== effect.value)
+                targetStats.effects = targetEffects;
+            };
 
             //Push log
             effectsLog.push(`${targetName} ${actionText} ${effect.value}`);
@@ -76,11 +79,15 @@ export const resolveSkillAction = (actionModule, attacker, defender, avgOrLuck =
         }
     }
 
+    const redundantEffect = actionText === "already has" || actionText === "doesn't have";
+
     const log = {
-        mainLine: roll !== "-" ? `${actionModule.name} is a ${outcomeText}! ${attacker.name} rolls a ${roll}` : "",
-        secondLine: `${outcome.text} ${effectsLog.join(", ")}`,
-        attacker: playerSkill ? `${attacker.name} -> ${check.type}: ${playerSkill}` : undefined,
-        defender: foeDefense ? `${defender.name} -> ${check.vs}: ${foeDefense}` : undefined,
+        mainLine: roll !== "-" ? `${actionModule.name} is a ${outcomeText}! ${attacker.name} rolls a ${roll}` : ``,
+        secondLine: redundantEffect 
+            ? `${effectsLog.join(", ")}`
+            : `${outcome.text} ${effectsLog.join(", ")}`,
+        attacker: playerSkill || playerSkill === 0 ? `${attacker.name} -> ${check.type}: ${playerSkill}` : undefined,
+        defender: foeDefense || foeDefense === 0 ? `${defender.name} -> ${check.vs}: ${foeDefense}` : undefined,
         effectsLog
     };
 

@@ -1,25 +1,14 @@
 - Completed Tasks ✅
--> Make it so you cant edit health if no character is selected [bug] ✅
--> Active effects seems broken (lots of the same conditions) [bug] ✅
--> Make it so you cant add effects when a character isnt selected [bug] ✅
--> Change mind to will [small] ✅
--> To add perception and dc to character sheet (cus im stupid) [bug] ✅
--> Fix it so my resolveActionHelper sorts through skills (currently undefined calculation) [bug] ✅
--> Sometimes my actions arent avalaible to select/ now they arent selectable at all [bug] ✅
--> Will isnt showing up on the calculator [bug] ✅
--> Add dieTracker in resolveActionHelper to better the UI [small] ✅
--> Change actionSelecter to also include a search bar [small] ✅
--> Add a searchbarToggle module that can be reused [small] ✅
--> Fix application so I can upload it to github [small] ✅
+-> Add 'remove effect function' to resolveActionHelper.js [med] ✅
+-> Redo resolveActionHelper to be more modular with similar actions [big] ✅
+
 
 - Working on it 
--> Add 'remove effect function' to resolveActionHelper.js [med]
--> Redo resolveActionHelper to be more modular with similar actions [big]
+-> Add it so effects can take tier 2, 3 etc.. of conditions [small]
 
 - Todo List ❌
 -- Essentials
 -> Make it so effects are read and processed into calculations [med]
--> Add it so effects can take tier 2, 3 etc.. of conditions [small]
 -> Add automate effects functionality [small]
 
 -- Additions
