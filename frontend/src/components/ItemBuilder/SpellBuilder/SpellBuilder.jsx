@@ -7,7 +7,7 @@ function SpellBuilder() {
     const [spellChoices, setSpellChoices] = useState([]);
     const [spellName, setSpellName] = useState("");
     const [DC, setDC] = useState(0);
-    const [saveType, setSaveType] = useState("Mind");
+    const [saveType, setSaveType] = useState("Will");
     const [AoE, setAoE] = useState(false);
     const [dmgDieNumbers, setDmgDieNumbers] = useState("");
     const [errors, setErrors] = useState({});
@@ -29,7 +29,7 @@ function SpellBuilder() {
 
     function resetValues() {
         setDC(0);
-        setSaveType("Mind");
+        setSaveType("Will");
         setAoE(false);
         setDmgDieNumbers("");
         setErrors({});
@@ -130,7 +130,7 @@ function SpellBuilder() {
                     {errors.DC && <div className="text-danger">{errors.DC}</div>}
                     <li>
                         Save Type:
-                        {["Mind","Reflex","Fort"].map(type => (
+                        {["Will","Reflex","Fort"].map(type => (
                             <Form.Check
                                 key={type}
                                 id={`addRadio${type}`}
@@ -199,7 +199,7 @@ function SpellBuilder() {
                     <li>DC<input type="number" value={DC} name="DC" onChange={handleSpellInputChange}/></li>
                     <li>
                         Save Type:
-                        {["Mind","Reflex","Fort"].map(type => (
+                        {["Will","Reflex","Fort"].map(type => (
                             <Form.Check
                                 key={type}
                                 id={`changeRadio${type}`}

@@ -39,7 +39,6 @@ export const resolveAction = async (req, res) => {
     //---Check if the action is a non-weapon/spell and go to respective module---
     if (actionModules[action]) {
       const result = resolveSkillAction(actionModules[action], attacker, defender, avgOrLuck, offensiveBonuses, defensiveBonuses);
-      console.log(result);
       return res.json(result);
     }
 
@@ -120,7 +119,7 @@ export const resolveAction = async (req, res) => {
       const saveTarget =
         saveType === "fortitude" ? defenderTemp.stats.fortitude: 
         saveType === "reflex" ? defenderTemp.stats.reflex: 
-        defenderTemp.stats.mind; //Default to Will/Mind
+        defenderTemp.stats.will; //Default to Will
       let hitChance, critChance, expectedDamage, roll, outcomeText, outcomeKey, dieTracker;
 
       //Average Mode
@@ -140,7 +139,6 @@ export const resolveAction = async (req, res) => {
           let rolledDamage = result.rolledDamage;
           rolledDamage += (modifier??0)
           dieTracker = result.dieTracker;
-          console.log(dieTracker);
           
           expectedDamage = outcomeKey === "criticalSuccess" ? rolledDamage * 2 : rolledDamage;
         }

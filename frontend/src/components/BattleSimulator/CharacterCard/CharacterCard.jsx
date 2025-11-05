@@ -1,15 +1,15 @@
-import { useState, useEffect } from "react";
-import { Button, Card, Form, ProgressBar } from "react-bootstrap";
+import { useState } from "react";
+import { Button, Card, ProgressBar } from "react-bootstrap";
 import blankPicture from ".././../../images/characterImages/blank character.png";
-
+import SearchbarToggle from "../../searchbarToggle/searchbarToogle";
 //Fake data for demo
 const CONDITION_LIST = ["Runic Weapon", "Slowed", "Frightened"];
 
 function CharacterCard({ title, character, setCharacter, characterList }) {
-
     //For the search bar when adding effect
     const [addingEffect, setAddingEffect] = useState(false);
-    const [searchTerm, setSearchTerm] = useState("");
+    const [effectSearch, setEffectTerm] = useState("");
+
 
     //For the search bar when selecting character
     const [choosingCharacter, setChoosingCharacter] = useState(false);
@@ -23,7 +23,7 @@ function CharacterCard({ title, character, setCharacter, characterList }) {
                 effects: [...character.effects, effect],
             });
         }
-        setSearchTerm("");
+        setEffectTerm("");
         setAddingEffect(false);
     };
 
@@ -35,15 +35,9 @@ function CharacterCard({ title, character, setCharacter, characterList }) {
         }));
     };
 
-    //Enables deletion from search bar of effects
-    const handleEffectBlur = () => {
-        setSearchTerm("");
-        setAddingEffect(false);
-    };
-
     //filters from available list of conditions
-    const filteredConditions = CONDITION_LIST.filter((c) =>
-        c.toLowerCase().includes(searchTerm.toLowerCase())
+    const filteredEffects = CONDITION_LIST.filter((c) =>
+        c.toLowerCase().includes(effectSearch.toLowerCase())
     );
 
     //Character selection
@@ -60,12 +54,6 @@ function CharacterCard({ title, character, setCharacter, characterList }) {
             },
         });
 
-        setCharacterSearch("");
-        setChoosingCharacter(false);
-    };
-
-    //Enables deletion from search bar of characters
-    const handleCharacterBlur = () => {
         setCharacterSearch("");
         setChoosingCharacter(false);
     };
@@ -90,69 +78,22 @@ function CharacterCard({ title, character, setCharacter, characterList }) {
                 {!choosingCharacter ? (
                     <Button
                         variant="outline-info"
-                        className="w-100 mb-3"
+                        className="w-100 mb-3 mt-2"
                         onClick={() => setChoosingCharacter(true)}
                     >
                         Select Character
                     </Button>
-                ) : (
-                    //Search Bar for characters
-                    <div className="mb-3">
-                        <Form.Control
-                            type="text"
-                            placeholder="Search characters..."
-                            autoFocus
-                            value={characterSearch}
-                            onChange={(e) => setCharacterSearch(e.target.value)}
-                            onBlur={handleCharacterBlur}
-                        />
-
-                        {characterSearch && (
-                            <div
-                                //results from search bar on characters
-                                style={{
-                                    background: "white",
-                                    color: "black",
-                                    border: "1px solid #ccc",
-                                    marginTop: "2px",
-                                    borderRadius: "4px",
-                                    maxHeight: "120px",
-                                    overflowY: "auto",
-                                }}
-                            >
-                                {/*If no chars, then put no matches, otherwise...*/}
-                                {filteredCharacters.length > 0 ? (
-                                    filteredCharacters.map((char, i) => (
-                                        <div
-                                            key={i}
-                                            style={{
-                                                padding: "4px 8px",
-                                                cursor: "pointer",
-                                                display: "flex",
-                                                alignItems: "center",
-                                                gap: "6px",
-                                            }}
-                                            onMouseDown={() => handleSelectCharacter(char)}
-                                        >
-                                            {/*Mini logo of character*/}
-                                            <img
-                                                src={char.image}
-                                                alt={char.characterName}
-                                                style={{
-                                                    width: "24px",
-                                                    height: "24px",
-                                                    borderRadius: "50%",
-                                                }}
-                                            />
-                                            <span>{char.characterName}</span>
-                                        </div>
-                                    ))
-                                ) : (
-                                    <div style={{ padding: "4px 8px" }}>No matches</div>
-                                )}
-                            </div>
-                        )}
-                    </div>
+                ) :  (
+                    <SearchbarToggle
+                        placeholder="Search characters..."
+                        list={filteredCharacters}
+                        getLabel={(c) => c.characterName}
+                        getImage={(c) => c.image}
+                        onSelect={(selectedChar) => {
+                            handleSelectCharacter(selectedChar);
+                        }}
+                        onBlur={() => setChoosingCharacter(false)}
+                    />
                 )}
 
                 {/* Character image */}
@@ -241,49 +182,16 @@ function CharacterCard({ title, character, setCharacter, characterList }) {
                     >
                         Add Effect
                     </Button>
-                ) : (
-                    <div>
-                        {/*Search bar for effects*/}
-                        <Form.Control
-                            className="mt-3"
-                            type="text"
-                            placeholder="Search conditions..."
-                            autoFocus
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            onBlur={handleEffectBlur}
-                        />
-                        {searchTerm && (
-                            //where all the conditions are listed
-                            <div
-                                style={{
-                                    background: "white",
-                                    color: "black",
-                                    maxHeight: "120px",
-                                    overflowY: "auto",
-                                }}
-                            >
-                                {/*If no results, put no matches*/}
-                                {filteredConditions.length > 0 ? (
-                                    filteredConditions.map((cond, i) => (
-                                        <div
-                                            key={i}
-                                            style={{
-                                                padding: "4px 8px",
-                                                cursor: "pointer",
-                                            }}
-                                            onMouseDown={() => handleSelectEffect(cond)}
-                                        >
-                                            {cond}
-                                        </div>
-                                    ))
-                                ) : (
-                                    <div style={{ padding: "4px 8px" }}>No matches</div>
-                                )}
-                            </div>
-                        )}
-                    </div>
-                )}
+                ) : <SearchbarToggle
+                        placeholder="Search effects..."
+                        list={filteredEffects}
+                        getLabel={(c) => c}
+                        onSelect={(selectedEffect) => {
+                            handleSelectEffect(selectedEffect);
+                        }}
+                        onBlur={() => setAddingEffect(false)}
+                    />
+                }
             </Card.Body>
         </Card>
     );

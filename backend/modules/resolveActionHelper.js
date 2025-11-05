@@ -2,21 +2,36 @@ import rollDice from "../utility/rollDice.js";
 import avgDice from "../utility/avgDie.js";
 import successTable from "../utility/successTable.js";
 
+
 export const resolveSkillAction = (actionModule, attacker, defender, avgOrLuck = false) => {
-    const { check, outcomes } = actionModule;
-    const playerSkill = attacker.stats[check.type];
-    const foeDefense = defender.stats[check.vs];
+    const type = actionModule.type;
+    let roll = "-", outcomeText = "", outcome, outcomes, outcomeKey;
+    let check, playerSkill, foeDefense;
 
-    const { roll, outcomeKey, outcomeText } = successTable(playerSkill, foeDefense)
+    //---Skill Check! Only if we have a vs do we need these values---
+    if (type === "skill") {
+        ({ check, outcomes } = actionModule)
+        playerSkill = attacker.stats.skills[check.type];
+        foeDefense = defender.stats[check.vs];
 
-    //---Gathers text from actionModule and the respective action about how successful it was---
-    const outcome = outcomes[outcomeKey];
-    const effects = [];
+        //Gathers text from actionModule and the respective action about how successful it was
+       ({ roll, outcomeKey, outcomeText } = successTable(playerSkill, foeDefense))
+        outcome = outcomes[outcomeKey];
+    } else if (type === "automatic") {
+        outcome = actionModule
+        outcomeText = outcome.outcomeText;
+    }
+    const effectsLog = [];
     let updatedAttacker = { ...attacker, effects: [...(attacker.effects || [])] };
     let updatedDefender = { ...defender, effects: [...(defender.effects || [])] };
 
     //---Iterate through the different effects the action applies---
     for (const effect of outcome.effects) {
+        const isAttacker = effect.target === "attacker";
+        const targetName = isAttacker ? attacker.name : defender.name;
+        const targetStats = isAttacker ? updatedAttacker : updatedDefender;
+        const targetEffects = targetStats.effects;
+
         switch (effect.type) {
         case "damage":
             //If average health damage, then we need the middle roll
@@ -27,45 +42,46 @@ export const resolveSkillAction = (actionModule, attacker, defender, avgOrLuck =
             //dieTracker is there just to display what the user rolled in damage 
             //(pointless if just one die has been rolled) -> dieTracker.length > 1
             const { rolledDamage: damage, dieTracker } = result;
-            const luckTextAddition = dieTracker && dieTracker.length > 1
+            const luckTextAddition = dieTracker.length > 1
                 ? `[${dieTracker.join(", ")}] `
                 : "";
 
             //Defender should be the default route, but can damage yourself
-            if (effect.target === "defender" || !effect.target) {
-                updatedDefender.stats.currentHealth = Math.max(0, updatedDefender.stats.currentHealth - damage)
-            } else {
-                updatedAttacker.stats.currentHealth = Math.max(0, updatedAttacker.stats.currentHealth - damage)
-            };
-            effects.push(`Dealt ${damage} ${luckTextAddition}${effect.damageType} damage to ${effect.target || "defender"}`);
+            targetStats.stats.currentHealth = Math.max(0, targetStats.stats.currentHealth - damage)
+
+            effectsLog.push(`Dealt ${damage} ${luckTextAddition}${effect.damageType} damage to ${targetName}`);
             break;
+
         case "condition":
-            //If the target is afflicted with a condition, apply it to the right one and log the effect in effects.
-            let targetForCondition;
-            if (effect.target === "attacker") {
-                targetForCondition = attacker.name;
-                updatedAttacker.effects.push(effect.value);
-            } else {
-                targetForCondition = defender.name;
-                updatedDefender.effects.push(effect.value);
-            }
-            effects.push(`${targetForCondition} gains ${effect.value}`);
-            break;
         case "removeCondition":
-            //TODO
-            effects.push(`Removed ${effect.values.join(", ")}`);
-            break;
+            const targetHasEffect = targetEffects.includes(effect.value);
+
+            //Determine action text and update targetEffects
+            const actionText = effect.type === "condition"
+                ? (targetHasEffect ? "already has" : "gains")
+                : (targetHasEffect ? "removes" : "doesn't have");
+
+            //Apply effect if needed
+            if (effect.type === "condition" && !targetHasEffect) targetEffects.push(effect.value);
+            if (effect.type === "removeCondition" && targetHasEffect) targetEffects = targetEffects.filter(e => e !== effect.value);
+
+            //Push log
+            effectsLog.push(`${targetName} ${actionText} ${effect.value}`);
+            break
+                
+       
         default:
+            console.log("No effect type to apply")
             break;
         }
     }
 
     const log = {
-        mainLine: `${actionModule.name} is a ${outcomeText}! ${attacker.name} rolls a ${roll}`,
-        secondLine: `${outcome.text} ${effects.join(", ")}`,
-        attacker: `${attacker.name} -> ${check.type}: ${playerSkill}`,
-        defender: `${defender.name} -> ${check.vs}: ${foeDefense}`,
-        effects
+        mainLine: roll !== "-" ? `${actionModule.name} is a ${outcomeText}! ${attacker.name} rolls a ${roll}` : "",
+        secondLine: `${outcome.text} ${effectsLog.join(", ")}`,
+        attacker: playerSkill ? `${attacker.name} -> ${check.type}: ${playerSkill}` : undefined,
+        defender: foeDefense ? `${defender.name} -> ${check.vs}: ${foeDefense}` : undefined,
+        effectsLog
     };
 
   return { updatedAttacker, updatedDefender, log };

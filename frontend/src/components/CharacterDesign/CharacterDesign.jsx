@@ -23,18 +23,20 @@ function CharacterDesign() {
     //Stored Characters
     const [characterStorage, setCharacterStorage] = useState([])
 
-    //Stats we care about
+    //Info that will be essential for character 
     const [characterName, setCharacterName] = useState("");
     const [imgUrl, setImgUrl] = useState("")
     const [characterStats, setCharacterStats] = useState({
         ac: 0,
+        dc: 0,
         health: 0,
         reflex: 0,
         fortitude: 0,
-        mind: 0,
-        athletics: 0,
+        will: 0,
         skills: {
+            perception: 0,
             acrobatics: 0,
+            athletics: 0,
             arcana: 0,
             crafting: 0,
             deception: 0,
@@ -61,6 +63,7 @@ function CharacterDesign() {
                     const res = await fetch("http://localhost:5000/api/characters");
                     const data = await res.json();
                     setCharacterStorage(data);
+                    
                     //We search the database to find the old characters name
                 
                 
@@ -249,7 +252,7 @@ function CharacterDesign() {
                         onChange={(e) => setCharacterName(e.target.value)}
                         onBlur={() => { if (characterName.trim() !== "") setEditNameVis(true); }}
                         onKeyDown={(e) => { if (e.key === "Enter" && characterName.trim() !== "") setEditNameVis(true); }}
-                        autoFocus={createOverEdit}
+                        autoFocus
                     />
                 )}
                 {errors.characterName && (
@@ -275,34 +278,40 @@ function CharacterDesign() {
             </div>
 
             {/*---Stats section---*/}
-            <div className="d-flex justify-content-center mb-4" style={{ width: "80%", flexWrap: "wrap" }}>
+            <div style={{ width:"100%", justifyContent:"center" }}>
                 {!editingSkills && (
                     <>
-                    {/* Left card */}
-                        <Card style={{ width:"200px", margin:"60px", height:"auto" }}>
+                    <div className="d-flex mb-4 justify-content-center">
+                        {/* Left card */}
+                        <Card style={{ width:"200px", margin:"60px", }}>
                             <CardBody>
                                 <h3>Stats</h3>
                                 {renderStatForms("ac")}
+                                {renderStatForms("dc")}
                                 {renderStatForms("health")}
-                                <Button
-                                    variant="success"
-                                    className="mt-5"
-                                    onClick={() => setEditingSkills(prev => !prev)}
-                                >
-                                    Edit Skills
-                                </Button>
                             </CardBody>
                         </Card>
                     
                         {/* Right card */}
-                        <Card style={{ width:"200px", margin:"60px", height:"auto" }}>
+                        <Card style={{ width:"200px", margin:"60px"}}>
                             <CardBody>
                                 <h3>Saves</h3>
                                 {renderStatForms("reflex")}
                                 {renderStatForms("fortitude")}
-                                {renderStatForms("mind")}
+                                {renderStatForms("will")}
                             </CardBody>
                         </Card>
+
+                    </div>
+                    <div className="d-flex justify-content-center">
+                        <Button
+                            variant="success"
+                            className="mt-5 justify-content-center d-flex"
+                            onClick={() => setEditingSkills(prev => !prev)}
+                        >
+                            Edit Skills
+                        </Button>
+                    </div>
                     </>
                 )}
                 

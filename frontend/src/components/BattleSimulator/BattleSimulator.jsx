@@ -1,14 +1,18 @@
 import { useEffect, useState } from "react";
-import { Dropdown, Button, Card, Form } from "react-bootstrap";
+import { Button, Card } from "react-bootstrap";
 import blankPicture from "../../images/characterImages/blank character.png";
 import CharacterCard from "./CharacterCard/CharacterCard";
+import SearchbarToggle from "../searchbarToggle/searchbarToogle";
 
 function BattleSimulator() {
-    //
-    const [log, setLog] = useState([]);
+    //For action selection
+    const [choosingAction, setChoosingAction] = useState(false);
+    const [actionSearch, setActionSearch] = useState("");
+
+    const [log, setLog] = useState({});
     const [characterList, setCharacterList] = useState([]);
     const [actionsRemaining, setActionsRemaining] = useState([true, true, true]);
-    const [selectedAction, setSelectedAction] = useState("Grapple");
+    const [selectedAction, setSelectedAction] = useState("");
     //I.e grapple, trip, etc...
     const [globalActions, setGlobalActions] = useState([]);
     const [availableActions, setAvailableActions] = useState([]);
@@ -61,30 +65,34 @@ function BattleSimulator() {
 
     //Load saved session from localStorage
     useEffect(() => {
-        //Where all the bonuses are stored alongside item selection
+        //Always start with global actions
+        let actions = [...globalActions];
+
+        //Try to load saved data
         const saved = localStorage.getItem("battleSession");
-        if (!saved) return;
+        if (saved) {
+            const parsed = JSON.parse(saved);
 
-        const parsed = JSON.parse(saved);
+            //Load attacker info if present
+            const currentAttacker = parsed[attacker.name];
+            if (currentAttacker) {
+                actions = [
+                    ...actions,
+                    ...(currentAttacker.selectedWeapons || []),
+                    ...(currentAttacker.selectedSpells || []),
+                ];
+                setOffensiveBonuses(currentAttacker.offensiveBonuses || {});
+            }
 
-        //Load attacker info
-        const currentAttacker = parsed[attacker.name];
-        if (currentAttacker) {
-            //Always include Grapple and Trip, then merge attacker’s actions
-            setAvailableActions([
-                ...globalActions,
-                ...(currentAttacker.selectedWeapons || []),
-                ...(currentAttacker.selectedSpells || []),
-            ]);
-
-            setOffensiveBonuses(currentAttacker.offensiveBonuses || {});
+            //Load defender info if present
+            const currentDefender = parsed[defender.name];
+            if (currentDefender) {
+                setDefensiveBonuses(currentDefender.defensiveBonuses || {});
+            }
         }
 
-        //Load defender info
-        const currentDefender = parsed[defender.name];
-        if (currentDefender) {
-            setDefensiveBonuses(currentDefender.defensiveBonuses || {});
-        }
+        //Always set available actions, even if no localStorage
+        setAvailableActions(actions);
     }, [attacker.name, defender.name, swapTrigger, globalActions]);
 
     const updateActions = ({ index = null, cost = null }) => {
@@ -132,6 +140,10 @@ function BattleSimulator() {
             return;
         }
 
+        if (!selectedAction) {
+            setError("You must select an action before commencing the turn!");
+            return;
+        }
         setError("");
         updateActions({ cost: 1 });
 
@@ -172,6 +184,17 @@ function BattleSimulator() {
         //So previous interaction isn't clogging screen
         setLog([]);
     };
+
+
+    const handleSelectAction = (action) => {
+        setSelectedAction(action);
+        setChoosingAction(false);
+        setActionSearch("");
+    };
+
+    const filteredActions = availableActions.filter((a) =>
+        a.toLowerCase().includes(actionSearch.toLowerCase())
+    );
 
     return (
         <div className="d-flex flex-column align-items-center p-4">
@@ -255,20 +278,36 @@ function BattleSimulator() {
                                 />
                             ))}
                         </div>
+                        
+                        {/*Selected action*/}
+                        {selectedAction && (
+                            <p style={{ fontSize: "24px", color: "white" }}>{selectedAction}</p>
+                        )}
+        
+                        {/*Search based action select*/}
+                        {!choosingAction ? (
+                            <Button
+                                variant="outline-info"
+                                className="w-100 mb-3"
+                                onClick={() => setChoosingAction(true)}
+                            >
+                                Select Action
+                            </Button>
+                        ) : (
+                            //Search Bar for actions
+                            <div className="mb-3">
+                                <SearchbarToggle
+                                    placeholder="Search actions..."
+                                    list={filteredActions}
+                                    getLabel={(c) => c}
+                                    onSelect={(selectedChar) => {
+                                        handleSelectAction(selectedChar);
+                                    }}
+                                    onBlur={() => setChoosingAction(false)}
+                                />
+                            </div>
+                        )}
 
-                        {/*Dropdown for action selection*/}
-                        <Dropdown onSelect={(key) => setSelectedAction(key)} className="mb-3">
-                            <Dropdown.Toggle variant="outline-light">
-                                {selectedAction}
-                            </Dropdown.Toggle>
-                            <Dropdown.Menu>
-                                {availableActions.map((action, i) => (
-                                    <Dropdown.Item key={i} eventKey={action}>
-                                        {action}
-                                    </Dropdown.Item>
-                                ))}
-                            </Dropdown.Menu>
-                        </Dropdown>
 
                         {/*Commence turn button*/}
                         <Button variant="success" className="mb-2" onClick={handleTurnCommence}>

@@ -1,12 +1,14 @@
 import grapple from "./actions/grapple.js";
 import trip from "./actions/trip.js";
 import demoralize from "./actions/demoralize.js";
+import stand from "./actions/stand.js";
 
 //List of all the global actions avalaible to the character
 export const actionModules = {
   Grapple: grapple,
   Trip: trip,
   Demoralize: demoralize,
+  Stand: stand
 };
 
 //Export just the keys (for frontend)

@@ -12,7 +12,7 @@ function BattleCalculator() {
         Weapon:    { toHit: { circumstance: 0, item: 0, status: 0 }, damage: { circumstance: 0, item: 0, status: 0 } },
         Fortitude: { toHit: { circumstance: 0, item: 0, status: 0 }, damage: { circumstance: 0, item: 0, status: 0 } },
         Reflex:    { toHit: { circumstance: 0, item: 0, status: 0 }, damage: { circumstance: 0, item: 0, status: 0 } },
-        Mind:      { toHit: { circumstance: 0, item: 0, status: 0 }, damage: { circumstance: 0, item: 0, status: 0 } },
+        Will:      { toHit: { circumstance: 0, item: 0, status: 0 }, damage: { circumstance: 0, item: 0, status: 0 } },
     };
 
     //Default values for all defensive bonuses
@@ -20,15 +20,15 @@ function BattleCalculator() {
         AC:        { circumstance: 0, item: 0, status: 0 },
         Fortitude: { circumstance: 0, item: 0, status: 0 },
         Reflex:    { circumstance: 0, item: 0, status: 0 },
-        Mind:      { circumstance: 0, item: 0, status: 0 },
+        Will:      { circumstance: 0, item: 0, status: 0 },
     };
-    const defenceConditionTypes = ["AC", "Fortitude", "Reflex", "Mind"];
-    const attackConditionTypes = ["Weapon", "Fortitude", "Reflex", "Mind"];
+    const defenceConditionTypes = ["AC", "Fortitude", "Reflex", "Will"];
+    const attackConditionTypes = ["Weapon", "Fortitude", "Reflex", "Will"];
 
     const [selectedPlayer, setSelectedPlayer] = useState("Choose Player");
-    //Weapon, spell (fort, reflex, mind)
+    //Weapon, spell (fort, reflex, will)
     const [selectedConditionAttack, setSelectedConditionAttack] = useState("Select attack type");
-    //AC, spell (fort, reflex, mind)
+    //AC, spell (fort, reflex, will)
     const [selectedConditionDefence, setSelectedConditionDefence] = useState("Select defence type");
     //Local battleSession data (bonuses and selected weapons for each character)
     const [savedCharacters, setSavedCharacters] = useState({});
@@ -279,7 +279,7 @@ function BattleCalculator() {
                                     <Dropdown.Item eventKey="Weapon" key="weapon">Weapon</Dropdown.Item>
                                     <Dropdown.Item eventKey="Fortitude" key="fortitude">Spell (Fortitude)</Dropdown.Item>
                                     <Dropdown.Item eventKey="Reflex" key="reflex">Spell (Reflex)</Dropdown.Item>
-                                    <Dropdown.Item eventKey="Mind" key="mind">Spell (Mind)</Dropdown.Item>
+                                    <Dropdown.Item eventKey="Will" key="will">Spell (Will)</Dropdown.Item>
                                 </Dropdown.Menu>
                             </Dropdown>
                             {/*As long as Select attack type is selected, show to hit and damage sections*/}
@@ -336,7 +336,7 @@ function BattleCalculator() {
                                     <Dropdown.Item eventKey="AC" key="AC">AC</Dropdown.Item>
                                     <Dropdown.Item eventKey="Fortitude" key="fortitude">Spell (Fortitude)</Dropdown.Item>
                                     <Dropdown.Item eventKey="Reflex" key="reflex">Spell (Reflex)</Dropdown.Item>
-                                    <Dropdown.Item eventKey="Mind" key="mind">Spell (Mind)</Dropdown.Item>
+                                    <Dropdown.Item eventKey="Will" key="will">Spell (Will)</Dropdown.Item>
                                 </Dropdown.Menu>
                             </Dropdown>
                             <h3
